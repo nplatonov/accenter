@@ -50,7 +50,6 @@ dpath <- "."
 mpath <- file.path(dpath,"common")
 
 print(c(dpath=dpath,mpath=mpath),quote=FALSE)
-q()
 gpath <- file.path(dpath,"results")
 rpath <- file.path(dpath,"predefined")
    p <- proc.time()

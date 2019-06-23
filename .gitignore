@@ -1,11 +1,12 @@
 _*/
 _*.*
 data/*/
+rsconnect/
 results/
+scenarios/prev/
 FarMenu.ini
 SciTE.session 
 inventory.rds.*
-scenarios/prev/
 **/md5
 *.link
 *.html

@@ -1,4 +1,5 @@
 ## ?rsconnect::deployApp
+opW <- options(warn=10)
 require(rsconnect)
 options(rsconnect.http=c("rcurl","curl","internal")[1]
        ,rsconnect.check.certificate=FALSE
@@ -17,6 +18,12 @@ if (is.null(opShiny)) {
 with(opShiny,setAccountInfo(name=name,token=token,secret=secret))
 appname <- "accenter"
 appfiles <- c("common","predefined","results","scenarios","app.R")
+if (TRUE) {
+   list1 <- dir(path=appfiles,recursive=TRUE,full.names=TRUE)
+   list1 <- list1[grep("(^_.+|^output.+|\\.(webp|png|R)$)",basename(list1),invert=TRUE)]
+   list1 <- list1[grep("(spf|blm|numitns)",basename(dirname(list1)),invert=TRUE)]
+   appfiles <- c(list1,"app.R")
+}
 deployApp(appName=appname,appFiles=appfiles,account=opShiny$name)
-setwd(wd)
 options(opW)
+warnings()
