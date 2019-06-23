@@ -1,2 +1,1 @@
-TODO: link to marxan 2.4.4 git repo
-
+Use source code from [marxan244](https://github.com/mattwatts/marxan244) Git repo (AGPL-3.0 license + license file) to compile binary executable file `marxan` (`marxan.exe` for MS Windows) and put/keep it in this directory.

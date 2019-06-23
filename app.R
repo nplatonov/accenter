@@ -1,13 +1,13 @@
 seed <- sample(100:999,1) ## 239 823
-gsheet <- "1sgFWjt2aidUD-fOYQCsKsaeILpVQvxK8"
 print(c(seed=seed))
 set.seed(seed)
 epsgList <- 3571:3576
 height <- "612px"
 editName <- c("*** INTERACTIVE ***","Preselected (dummy)")[1]
-googleDrive <- TRUE
+tryToRefuseLeafletRendering <- FALSE
+devel <- length(grep("^[A-Z]\\:/platt",Sys.getenv("USER")))>0 & !interactive() #.argv0()=="flipper-pampan.R"
+tryToRefuseLeafletRendering <- tryToRefuseLeafletRendering && devel
 regionName <- c("Pan-Arctic area")
-isMapview <- !FALSE
 '.argv0' <- function() {
    arglist <- commandArgs(FALSE)
    if (length(ind <- grep("^--file=.+",arglist,ignore.case=FALSE))==1)
@@ -40,30 +40,23 @@ isMapview <- !FALSE
    return (message(mytext))
 }
 'aboutTab' <- function() {
-   opW <- options(warn=2)
-   if (inherits(ret <- try(includeMarkdown("./flipper-about.md")),"try-error"))
-      ret <- helpText("Should be provided in './flipper-about.md' file")
+   opW <- options(warn=2) ## 2
+   if (inherits(ret <- try(includeMarkdown("./accenter-about.md")),"try-error"))
+      ret <- helpText("Should be provided in './accenter-about.md' file")
    options(opW)
    ret
 }
-dpath <- c("../20190404-CF/",".")[2]
+dpath <- "."
 mpath <- file.path(dpath,"common")
-dev <- !interactive()#.argv0()=="flipper-pampan.R"
-if (!dir.exists(mpath)) {
-   dpath <- "."
-   mpath <- file.path(dpath,"common")
-   if (!dir.exists(mpath)) {
-      dpath <- "D:/ongoing/GoogleDrive/PAMPAN/Data Drop Off Folder/marxan-2.0"
-      mpath <- file.path(dpath,"common")
-   }
-}
+
 print(c(dpath=dpath,mpath=mpath),quote=FALSE)
+q()
 gpath <- file.path(dpath,"results")
 rpath <- file.path(dpath,"predefined")
    p <- proc.time()
    options(ursaTimeStart=p,ursaTimeDelta=p)
    rm(p)
-if (dev)
+if (devel)
    .elapsedTime("package load -- start")
 suppressMessages({
    require(shiny)
@@ -77,7 +70,7 @@ suppressMessages({
    require(DT)
    requireNamespace("lwgeom")
 })
-if (dev)
+if (devel)
    .elapsedTime("package load -- finish")
 rname0 <- dir(path=rpath,pattern="\\.(geojson|sqlite|shp)(\\.(zip))*$",full.names=TRUE)
 rname1 <- c(editName,gsub("\\.shp(\\.zip)*","",basename(rname0)))#[1]
@@ -93,6 +86,17 @@ if (!length(spath0))
    stop("Scenarios dir is empty")
 mdname <- dir(path=file.path(dpath,"scenarios"),pattern="\\.xlsx$",full.names=TRUE)
 if (googleDrive <- length(mdname)!=1) {
+   gsheetFile <- "./scenarios/gsheet.id"
+   if (file.exists(gsheetFile))
+      gsheet <- readLines(gsheetFile,warn=FALSE)
+   else {
+      gsheetFile <- dir(path="./scenarios",pattern="\\.gsheet$"
+                       ,full.names=TRUE,recursive=FALSE)
+      if (length(gsheetFile)==1)
+         gsheet <- jsonlite::fromJSON(gsheetFile)$doc_id
+      else
+         gsheet <- stop("cannot get scenarios sheet files")
+   }
    mdname <- tempfile(fileext=".xlsx") ## tmpdir=file.path(dpath,"scenarios"),
    download.file(paste0("https://docs.google.com/spreadsheets/export?id="
                        ,gsheet,"&format=xlsx"),mdname,mode="wb")
@@ -181,11 +185,14 @@ pu <- shapefile(Fpu)
 #pu <- shapefile(Fpu)
 uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red", "yellow"
   # fluidPage(title="Flipper - design and review"
-   ,dashboardHeader(title="Flipper: Palm Marxan",disable=TRUE,titleWidth=300)
+   ,dashboardHeader(title="Accenter: Imagine Marxan",disable=TRUE,titleWidth=300)
    ,dashboardSidebar(NULL
       ,tags$head(HTML("
          <style>
             /*.skin-blue .main-sidebar{width: 600px;}*/
+            .skin-blue zzzbody {
+               min-height: unset !important; /* displayed 611px */
+            }
             .skin-blue .left-side,
             .skin-blue .main-sidebar{
                 padding-top: 5px;
@@ -305,11 +312,9 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
          ,br()
          ,br()
          ,img(src=switch(Sys.getenv("COMPUTERNAME")
-                        ,MARLzIN="http://sevin-expedition.ru/netcat_files/img/logo-sev.gif"
+                        ,MARLIN="http://sevin-expedition.ru/netcat_files/img/logo-sev.gif"
                         ,"https://new.wwf.ru/assets/img/logo.svg"),width=40)
         # ,HTML("</center>")
-         ,br()
-         ,br()
          ,br()
          ,br()
          ,br()
@@ -338,8 +343,8 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
          ,menuItem(text="Nikita Platonov"
                   ,href="https://orcid.org/0000-0001-7196-7882",icon=icon("user"))
          ,menuItem(text=" ",icon=icon("github"),
-                   href="https://stackoverflow.com/questions/36679944/mapview-for-shiny")
-                   ##~ href="https://github.com/nplatonov/demography/")
+                   ##~ href="https://stackoverflow.com/questions/36679944/mapview-for-shiny")
+                   href="https://github.com/nplatonov/accenter/")
          ,br()
       )
    )
@@ -409,13 +414,13 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
    ) ## dashboardBody
 )
 server <- function(input,output,session) {
-   if (dev)
+   if (devel)
       session$onSessionEnded(stopApp)
    exchange <- reactiveValues(edits=NULL,puvspr=NULL,spec=NULL#,prob=NULL
                              ,freq=NULL,freq3=NULL,overlay=NULL,res=NULL)
   # scenario <- observeEvent(input$spath,{
    scenario <- observe({
-      if (dev)
+      if (devel)
          .elapsedTime("scenario (observe) -- start")
       ##~ input$epsg
       ##~ input$spath
@@ -449,17 +454,17 @@ server <- function(input,output,session) {
          freq3 <- sf::st_transform(shapefile(Fagr),4326)
       }
       else if (TRUE) {
-         if (dev)
+         if (devel)
             .elapsedTime("aggregate -- start")
          freq3 <- sf::st_transform(
                        aggregate(freq,by=list(freq$sum),mean)["sum"],4326)
-         if (dev)
+         if (devel)
             .elapsedTime("aggregate -- finish")
       }
       else
          freq3 <- sf::st_transform(freq,4326)
       if (input$rpath==editName) {
-         if (dev)
+         if (devel)
             .elapsedTime("   mapedit leaflet -- start")
          m <- polarmap(epsg)
          pal <- colorNumeric(palette="viridis",domain=freq3$sum)
@@ -473,7 +478,7 @@ server <- function(input,output,session) {
                          ,fillOpacity=0.5
                         # ,highlightOptions=highlightOptions(fillOpacity=0)
                          )
-         if (dev)
+         if (devel)
             .elapsedTime("   mapedit leaflet -- finish")
          if (input$rpath==editName) {
             edits <- callModule(editMod,"editor",leafmap=m
@@ -488,21 +493,21 @@ server <- function(input,output,session) {
      # exchange$prob <- prob
       exchange$freq <- freq
       exchange$freq3 <- freq3
-      if (dev)
+      if (devel)
          .elapsedTime("scenario (observe) -- finish")
       removeModal()
    })
   # edits <- callModule(editMod,"editor",m@map)
   # scenario$invalidate()
    data <- reactive({
-      if (dev)
+      if (devel)
          dir.create("./shiny.log",showWarnings=FALSE)
-      if (dev)
+      if (devel)
          .elapsedTime("data (reactive) -- start")
       epsg <- input$epsg
       if (input$rpath==editName) {
          edits <- exchange$edits()
-         if (dev)
+         if (devel)
             .elapsedTime("   data (reactive) -- switch to edit")
          req(edits$finished)
         # s <- subset(edits()$finished,feature_type %in% c("rectangle","polygon","polyline"))
@@ -515,7 +520,7 @@ server <- function(input,output,session) {
          rname <- rname0[grep(input$rpath,basename(rname0))]
          s <- shapefile(rname)
          if (FALSE) {
-            if (dev)
+            if (devel)
                .elapsedTime("predefined union -- start")
             print(sf::st_crs(s))
            # print(s)
@@ -528,7 +533,7 @@ server <- function(input,output,session) {
             print(nrow(s))
             print(length(s))
             print(length(sf::st_geometry(s)))
-            if (dev)
+            if (devel)
                .elapsedTime("predefined union -- finish")
          }
         # s <- sf::st_geometry(s)
@@ -537,7 +542,7 @@ server <- function(input,output,session) {
      # exchange$edits <- NULL
       freq <- exchange$freq
       req(nrow(freq)>0)
-      if (dev)
+      if (devel)
          .elapsedTime("   intersection -- start")
       ##~ showNotification(id="reactive",closeButton=FALSE,duration=120,"Find intersection..."
                       ##~ ,type="warning")
@@ -557,7 +562,7 @@ server <- function(input,output,session) {
                            ,size="s",easyClose = TRUE,footer = NULL))
       file.remove(dir(path="./shiny.log",pattern="^res.+\\.(cpg|dbf|prj|shp|shx)"
                      ,full.names=TRUE))
-      if (dev) {
+      if (devel) {
          sf::st_write(freq,"./shiny.log/res-freq.shp",quiet=TRUE)
          sf::st_write(s,"./shiny.log/res-s.shp",quiet=TRUE)
       }
@@ -569,7 +574,7 @@ server <- function(input,output,session) {
       }
       removeModal()
       removeNotification(id="reactive")
-      if (dev)
+      if (devel)
          .elapsedTime("   intersection -- finish")
       req(nrow(res)>0)
       if (careful) {
@@ -582,14 +587,14 @@ server <- function(input,output,session) {
       res <- res[ind,]
       ID <- res[["ID"]]
       if (FALSE) {
-         if (dev)
+         if (devel)
             .elapsedTime("union -- start")
          res <- sf::st_union(res)
          res <- sf::st_sf(res,data=data.frame(FID=0))
-         if (dev)
+         if (devel)
             .elapsedTime("union -- finish")
       }
-      if (dev) {
+      if (devel) {
          file.remove(dir(path="./shiny.log",pattern="intersection\\.(cpg|dbf|prj|shp|shx)"
                     ,full.names=TRUE))
          sf::st_write(res,"./shiny.log/intersection.shp",quiet=TRUE)
@@ -625,7 +630,7 @@ server <- function(input,output,session) {
       if (TRUE)
          res5 <- res5[with(res5,order(prop,represent,decreasing=TRUE)),]
       exchange$res <- res
-      if (dev)
+      if (devel)
          .elapsedTime("data (reactive) -- finish")
       list(res=res,freq=freq,freq3=exchange$freq3,res5=res5)
    })
@@ -646,7 +651,7 @@ server <- function(input,output,session) {
       req(nrow(freq))
      # req(nrow(predefined))
       req(length(sf::st_geometry(predefined)))
-      if (dev)
+      if (devel)
          .elapsedTime("occurrence leaflet -- start")
      # showNotification(closeButton=FALSE,duration=12
      #                 ,"Data processing in progress",type="warning")
@@ -666,10 +671,10 @@ server <- function(input,output,session) {
       }
       else  {
          if (T) {
-            if (dev)
+            if (devel)
                .elapsedTime("   union -- start")
             predefined <- sf::st_union(predefined)
-            if (dev)
+            if (devel)
                .elapsedTime("   union -- finish")
          }
          predefined2 <- sf::st_transform(predefined,4326)
@@ -679,13 +684,13 @@ server <- function(input,output,session) {
          if (TRUE) ## simplified
             freq2 <- aggregate(freq,by=list(freq$sum),mean)["sum"]
       }
-      if (isMapview) {
+      if (tryToRefuseLeafletRendering) {
         # m <- polarmap(epsg)
          m <- mapview::mapview() %>% leafem::removeMouseCoordinates()
         # m <- mapview() ## return 'm@map'. but after modifications can returnx` 'm'
         # m <- leafem::removeMouseCoordinates(m)
         # m <- removeMouseCoordinates(m)
-         if (dev)
+         if (devel)
             .elapsedTime("occurrence leaflet -- finish")
          removeNotification(id="leaflet")
          return(m)
@@ -718,7 +723,7 @@ server <- function(input,output,session) {
                       ##~ ) %>%
            ##~ addPolygons(data=predefined2,weight=1,fillOpacity=0.3)
      # print("LEAFLET PREDEFINED -- finish")
-      if (dev)
+      if (devel)
          .elapsedTime("occurrence leaflet -- finish")
       removeNotification(id="leaflet")
       m
@@ -731,7 +736,7 @@ server <- function(input,output,session) {
       on.exit(removeNotification(id="leaflet"))
       ind <- input$tbl_rows_selected
       withOverlap <- !is.null(ind)
-      if (dev)
+      if (devel)
          .elapsedTime("review leaflet -- start")
       if (T) {
          if (!withOverlap) {
@@ -776,10 +781,10 @@ server <- function(input,output,session) {
          else
             stop("which is lon0?:",dQuote(lon0))
          if (T) {
-            if (dev)
+            if (devel)
                .elapsedTime("   union -- start")
             d <- sf::st_union(d)
-            if (dev)
+            if (devel)
                .elapsedTime("   union -- finish")
          }
          d <- sf::st_transform(d,4326)
@@ -791,7 +796,7 @@ server <- function(input,output,session) {
          m <- leaflet() %>% addTiles() %>%
               addPolygons(data=d,weight=0.5,popup=d$sum)
       }
-      if (dev)
+      if (devel)
          .elapsedTime("review leaflet -- finish")
       if (!withOverlap) 
          return(m)
@@ -939,7 +944,7 @@ server <- function(input,output,session) {
       updateTabsetPanel(session,"tabset1","review")
    })
    observeEvent(input$'editor-map_shape_click', {
-      updateTabsetPanel(session,"tabset1","review")
+     # updateTabsetPanel(session,"tabset1","review") ## false switching during digitizing
    })
 }
 shinyApp(ui=uiTab,server=server)

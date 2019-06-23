@@ -9,3 +9,4 @@ scenarios/prev/
 **/md5
 *.link
 *.html
+README.Rmd
