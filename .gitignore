@@ -1,0 +1,11 @@
+_*/
+_*.*
+data/*/
+results/
+FarMenu.ini
+SciTE.session 
+inventory.rds.*
+scenarios/prev/
+**/md5
+*.link
+*.html
