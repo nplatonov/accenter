@@ -10,6 +10,7 @@ results/**/*numitns*
 results/**/output*
 results/**/*.png
 results/**/*.webp
+shiny.log/
 
 **/md5
 FarMenu.ini

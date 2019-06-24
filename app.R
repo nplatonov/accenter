@@ -4,9 +4,13 @@ set.seed(seed)
 epsgList <- 3571:3576
 height <- "612px"
 editName <- c("*** INTERACTIVE ***","Preselected (dummy)")[1]
-tryToRefuseLeafletRendering <- FALSE
 devel <- length(grep("^[A-Z]\\:/platt",Sys.getenv("USER")))>0 & !interactive() #.argv0()=="flipper-pampan.R"
-tryToRefuseLeafletRendering <- tryToRefuseLeafletRendering && devel
+tryToRefuseLeafletRendering <- FALSE && devel
+css <- character()
+if (file.exists("www/custom.css")) {
+   css <- readLines("www/custom.css")
+   css <- paste(c("<style>",paste("   ",css),"</style>"),collapse="\n")
+}
 regionName <- c("Pan-Arctic area")
 '.argv0' <- function() {
    arglist <- commandArgs(FALSE)
@@ -48,7 +52,6 @@ regionName <- c("Pan-Arctic area")
 }
 dpath <- "."
 mpath <- file.path(dpath,"common")
-
 print(c(dpath=dpath,mpath=mpath),quote=FALSE)
 gpath <- file.path(dpath,"results")
 rpath <- file.path(dpath,"predefined")
@@ -186,145 +189,18 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
   # fluidPage(title="Flipper - design and review"
    ,dashboardHeader(title="Accenter: Imagine Marxan",disable=TRUE,titleWidth=300)
    ,dashboardSidebar(NULL
-      ,tags$head(HTML("
-         <style>
-            /*.skin-blue .main-sidebar{width: 600px;}*/
-            .skin-blue zzzbody {
-               min-height: unset !important; /* displayed 611px */
-            }
-            .skin-blue .left-side,
-            .skin-blue .main-sidebar{
-                padding-top: 5px;
-            }
-            .skin-blue section.sidebar .shiny-input-container {
-               padding: 0 5px 0 5px !important;
-            }
-            .skin-blue .form-group {
-               margin-bottom: 5px;
-            }
-            .skin-blue .selectize-control {
-               margin-bottom: 5px;
-            }
-            .skin-blue .main-sidebar {
-               width: 40px;
-               z-index: 1010;
-            }
-           /* 
-            .skin-blue .main-sidebar:hover {
-               width: 220px;
-            }
-           */ 
-            .skin-blue .left-side,
-            .skin-blue .main-sidebar,
-            .skin-blue .main-header .navbar,
-            .skin-blue .main-header .logo,
-            .skin-blue .main-header .navbar .sidebar-toggle:hover,
-            .skin-blue .main-header .logo:hover,
-            .skin-blue .wrapper,
-            .skin-blue .nav-tabs-custom > .nav-tabs,
-            .skin-blue .sidebar-menu > li.active > a,
-            .skin-blue .sidebar-menu > li:hover > a {
-               background-color: #ecf0f5; /*#2e7176 #ecf0f5*/
-            }
-            .skin-blue .nav-tabs-custom > .nav-tabs > li.active {
-                border-top-color: lavender; /* lavender laightgrey */
-            }            
-            .skin-blue .main-header .navbar .sidebar-toggle:hover,
-            .skin-blue .main-header .logo:hover {
-               color: #ddd;
-            }
-            .skin-blue .sidebar-menu > li {
-                margin: 0 0 0 -6px;
-            }
-            .skin-blue .sidebar img {
-               padding-top: 0px;
-               padding-left: 2px;
-            }
-            .skin-blue .sidebar-menu > li > a {
-               padding: 5px 0 0 18px;
-            }
-            #menuhead {
-               width:600px;
-            }
-            .skin-blue .nav > li > a {
-               padding: 8px 9vw 8px 1vw; /* 4px 8vw 4px 2px */
-            }
-            .skin-blue .sidebar-menu > li.active > a,
-            .skin-blue .sidebar-menu > li:hover > a {
-               color: lightslategrey;
-            }
-            .skin-blue .nav-tabs-custom > .nav-tabs > li > a {
-               color: slategrey;
-            }
-            .skin-blue .nav-tabs-custom > .nav-tabs > li > a:hover {
-               color: unset !important;
-            }
-            .skin-blue .nav-tabs-custom > .nav-tabs > li.active > a {
-               color: unset !important; /* lightslategrey */
-            }
-           /**/
-            .skin-blue .content-wrapper,
-            .skin-blue  body {
-               background-color: #ecf0f5;
-            }
-           /**/
-            .skin-blue .content {
-               padding-left: 5px;
-               padding-right: 5px;
-               padding-top: 5px;
-               padding-bottom: 0px;
-               margin-bottom: -40px;
-            }
-            .skin-blue .paginate_button {
-               padding: 0.4em 0.7em !important;
-            }
-            .skin-blue .dt-buttons {
-               margin: -0.4em 1.8em !important;
-            }
-            .sidebar-menu > li > a > .fa,
-            .sidebar-menu > li > a > .glyphicon,
-            .sidebar-menu > li > a > .ion {
-                width: 24px;
-            }
-            .skin-blue .sidebar-menu > li > a > span {
-               display: inline-block;
-               position: absolute;
-              /* width: 140px; */
-              /* height: 30px; */
-               background-color: #eee;
-               margin-top: -5px;
-               padding-top: 5px;
-               padding-bottom: 3px;
-               padding-left: 0px;
-               padding-right: 5px;
-            }
-            #viewerLeaflet, #viewerMapview, #editor-map {
-               height: 88vh !important;
-            }
-         </style>
-      "))
+     # ,tags$link(rel="stylesheet",type="text/css",href="./custom.css")
+      ,tags$head(HTML(css))
       ,collapsed=FALSE
       ,disable=FALSE
       ,width = 40
       ,sidebarMenu(id="tabs"
         # ,HTML("<center>")
-         ,br()
-         ,br()
          ,img(src=switch(Sys.getenv("COMPUTERNAME")
                         ,MARLIN="http://sevin-expedition.ru/netcat_files/img/logo-sev.gif"
-                        ,"https://new.wwf.ru/assets/img/logo.svg"),width=40)
+                        ,"https://new.wwf.ru/assets/img/logo.svg")
+             ,width=40,style="opacity:0.5;")
         # ,HTML("</center>")
-         ,br()
-         ,br()
-         ,br()
-         ,br()
-         ,br()
-         ,br()
-         ,br()
-         ,br()
-         ,br()
-         ,br()
-         ,br()
          ,br()
          ,br()
          ,br()
@@ -344,7 +220,6 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
          ,menuItem(text=" ",icon=icon("github"),
                    ##~ href="https://stackoverflow.com/questions/36679944/mapview-for-shiny")
                    href="https://github.com/nplatonov/accenter/")
-         ,br()
       )
    )
    ,dashboardBody(id="resetable"
@@ -357,7 +232,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                   ,tabPanel(title="Map",value="map",icon=icon("globe")
                      ,fluidRow(NULL
                         ,column(8
-                           ,uiOutput("uiMap")
+                           ,uiOutput("ui")
                           # ,editModUI("editor")
                         )
                         ,column(4
@@ -413,7 +288,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
    ) ## dashboardBody
 )
 server <- function(input,output,session) {
-   if (devel)
+   if (T | devel)
       session$onSessionEnded(stopApp)
    exchange <- reactiveValues(edits=NULL,puvspr=NULL,spec=NULL#,prob=NULL
                              ,freq=NULL,freq3=NULL,overlay=NULL,res=NULL)
@@ -633,7 +508,7 @@ server <- function(input,output,session) {
          .elapsedTime("data (reactive) -- finish")
       list(res=res,freq=freq,freq3=exchange$freq3,res5=res5)
    })
-   output$uiMap <- renderUI({
+   output$ui <- renderUI({
       if (T & input$rpath==editName) {
          ret <- editModUI("editor")#,height=height)
       }

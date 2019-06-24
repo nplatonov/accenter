@@ -22,7 +22,7 @@ if (TRUE) {
    list1 <- dir(path=appfiles,recursive=TRUE,full.names=TRUE)
    list1 <- list1[grep("(^_.+|^output.+|\\.(webp|png|R)$)",basename(list1),invert=TRUE)]
    list1 <- list1[grep("(spf|blm|numitns)",basename(dirname(list1)),invert=TRUE)]
-   appfiles <- c(list1,"app.R")
+   appfiles <- unique(c(list1,"app.R"))
 }
 deployApp(appName=appname,appFiles=appfiles,account=opShiny$name)
 options(opW)
