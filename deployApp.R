@@ -17,7 +17,7 @@ if (is.null(opShiny)) {
 }
 with(opShiny,setAccountInfo(name=name,token=token,secret=secret))
 appname <- "accenter"
-appfiles <- c("common","predefined","results","scenarios","app.R")
+appfiles <- c("common","predefined","results","scenarios","www","app.R")
 if (TRUE) {
    list1 <- dir(path=appfiles,recursive=TRUE,full.names=TRUE)
    list1 <- list1[grep("(^_.+|^output.+|\\.(webp|png|R)$)",basename(list1),invert=TRUE)]

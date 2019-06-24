@@ -11,6 +11,9 @@ results/**/output*
 results/**/*.png
 results/**/*.webp
 shiny.log/
+shiny.dev/
+question*/
+question.html
 
 **/md5
 FarMenu.ini

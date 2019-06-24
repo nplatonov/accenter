@@ -1,3 +1,7 @@
+body {
+   width: 100% !important;
+   max-width: 100% !important;
+}
 /*.skin-blue .main-sidebar{width: 600px;}*/
 .skin-blue zzzbody {
    min-height: unset !important; /* displayed 611px */

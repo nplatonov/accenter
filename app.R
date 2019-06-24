@@ -43,11 +43,35 @@ regionName <- c("Pan-Arctic area")
       print(mytext)
    return (message(mytext))
 }
-'aboutTab' <- function() {
+'infoTab' <- function() {
    opW <- options(warn=2) ## 2
-   if (inherits(ret <- try(includeMarkdown("./accenter-about.md")),"try-error"))
-      ret <- helpText("Should be provided in './accenter-about.md' file")
+   if (inherits(ret <- try(includeMarkdown("./accenter-info.md")),"try-error"))
+      ret <- helpText("Should be provided in './accenter-info.md' file")
    options(opW)
+   ret
+}
+'questionTabUnused' <- function() {
+   if (F) {
+      opW <- options(warn=2) ## 2
+      if (inherits(ret <- try(includeMarkdown("./accenter-question.md")),"try-error"))
+         ret <- helpText("Should be provided in './accenter-question.md' file")
+      options(opW)
+   }
+   else if (F) {
+      ret <- HTML(markdown::markdownToHTML(knitr::knit('question.Rmd',quiet=FALSE)))
+   }
+   else {
+      a1 <- "res1.html" # tempfile()
+      rmarkdown::render('question.Rmd'
+                       ,output_format=rmarkdown::html_fragment()
+                      # ,output_format=rmarkdown::html_vignette(css=NULL)
+                       ,output_file=a1,quiet=TRUE
+                      # ,params=list(prm=analysis(),kind=1)
+                       )
+      a2 <- scan(a1,what=character(),encoding="UTF-8",quiet=TRUE)
+     # file.remove(a1)
+      ret <- HTML(a2)
+   }
    ret
 }
 dpath <- "."
@@ -204,10 +228,30 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
          ,br()
          ,br()
          ,br()
+         ##~ ,absolutePanel(id = 'clear_panel', bottom = 6, left = 510,
+               ##~ shinyWidgets::dropdownButton(icon = icon('question'), size = 'sm', up = TRUE, width = '700px', inputId = 'help',
+                   ##~ h2('Map isolines for anywhere in the world!'),
+                   ##~ hr(),
+                   ##~ div(style = 'display: inline-block; vertical-align: bottom; min-width: 100%;',
+                       ##~ column(6, style = 'padding-left: 0',
+                           ##~ h4('What is an isoline?', style = 'margin-top: 0;'),
+                           ##~ p('The prefix "iso", draws its meaning from Ancient Greek meaning "same" or "equal". Each line \
+                             ##~ on an isoline map shares the same value. An isochrone is a special type of isoline that \
+                             ##~ visualizes travel time. This application shows lines of equal travel time or equal network \
+                             ##~ distance for mode choices of driving or walking. Click anywhere on the map and see \
+                             ##~ isochrones!', style = 'font-size: 14px;color: black;')
+                       ##~ ),
+                       ##~ column(6,
+                           ##~ img(src = 'example.png', style = 'height: 250px; display: block; margin-bottom: 20px; \
+                                                            ##~ margin-right: auto; margin-left: auto;')
+                       ##~ )
+                   ##~ )
+               ##~ )
+         ##~ )
          ,br()
          ,menuItem(text="Main panel",tabName="main",icon=icon("bars"))
-         ,menuItem(text="Glossary",tabName="glossary", icon = icon("question"))
-         ,menuItem(text="About",tabName="about", icon = icon("info"))
+         ,menuItem(text="Documentation",tabName="question", icon = icon("question"))
+         ,menuItem(text="Info",tabName="info", icon = icon("info"))
          ,br()
          ,br()
          ,br()
@@ -225,10 +269,20 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
    ,dashboardBody(id="resetable"
      # ,tags$script(HTML("$('body').addClass('sidebar-mini');"))
       ,tabItems(
-         tabItem(tabName="about",aboutTab())
+          tabItem(tabName="info",infoTab())
+        # ,tabItem(tabName="question",questionTabUnused())
+         ,tabItem(tabName="question"
+            ,fluidRow(NULL 
+               ,box(width=12
+                  ,column(2)
+                  ,column(8,uiOutput("question"))
+                  ,column(2)
+               )
+            )
+         )
          ,tabItem(tabName="main"
             ,fluidRow(NULL
-               ,tabBox(width=12,title="",id="tabset1",selected="map"
+               ,tabBox(width=12,title="",id="tabset1",selected=c("map","question")[1]
                   ,tabPanel(title="Map",value="map",icon=icon("globe")
                      ,fluidRow(NULL
                         ,column(8
@@ -288,7 +342,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
    ) ## dashboardBody
 )
 server <- function(input,output,session) {
-   if (T | devel)
+   if (T & devel)
       session$onSessionEnded(stopApp)
    exchange <- reactiveValues(edits=NULL,puvspr=NULL,spec=NULL#,prob=NULL
                              ,freq=NULL,freq3=NULL,overlay=NULL,res=NULL)
@@ -720,9 +774,9 @@ server <- function(input,output,session) {
    output$tblSimple <- renderDT(
       head(data()$res5)[,-c(2)],options = list(lengthChange = FALSE)
    )
-   proxy <- dataTableProxy('tbl')
+  # proxy <- dataTableProxy('tbl')
    output$tbl <- renderDT({
-      proxy %>% DT::selectRows(NULL)
+     # proxy %>% DT::selectRows(NULL)
       dt <- data()$res5
       if (FALSE)
          dt <- subset(dt,prop>0)
@@ -783,6 +837,26 @@ server <- function(input,output,session) {
          DT::formatRound(cname[c(3,4,7)],4) %>%
          DT::formatPercentage(cname[c(5,6)],2)
    })
+   output$question <- renderUI({
+      a1 <- "./shiny.log/res1.html" # tempfile()
+      bib <- file.path(tempdir(),"accenter.bib")
+      if (!file.exists(bib))
+         download.file("https://nplatonov.github.io/platt.bib",bib)
+      file.copy(bib,"platt.bib")
+      rmarkdown::render('question.Rmd'
+                       ,output_format=rmarkdown::html_fragment()
+                      # ,output_format=rmarkdown::html_vignette(css=NULL)
+                       ,output_file=a1,quiet=!TRUE
+                       ,params=list(prm=data()$res5,kind=1L)
+                      # ,pandoc_args="--metadata bibliogpaphy=platt.bib"
+                       )
+      a2 <- scan(a1,what=character(),encoding="UTF-8",quiet=TRUE)
+      file.remove("platt.bib")
+     # file.remove(a1)
+      ret <- HTML(a2)
+      ret
+   })
+   
    ##~ output$dt_verbatim_dev <- renderPrint({
       ##~ input$tbl_rows_selected
      ##~ # sample(letters,3)
