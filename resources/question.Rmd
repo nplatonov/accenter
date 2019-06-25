@@ -1,0 +1,182 @@
+---
+params:
+   kind: 0
+   prm: NULL
+   bib: C:/platt/article/platt.bib
+pagetitle: Accenter -- documentation
+title: "\0"
+author: "Nikita Platonov"
+link-citations: true
+bibliography: "`r params$bib`"
+csl: https://nplatonov.github.io/platt3.csl
+date: "`r paste(format(file.mtime('question.Rmd'),'Updated: %Y-%m-%d %H:%M.'))`"
+output:
+   bookdown::html_document2:
+      mathjax: NULL
+      base_format: rmarkdown::html_vignette
+      css: https://nplatonov.github.io/html_vignette.css
+      self_contained: false
+      number_sections: no
+---
+
+<style>
+   body {
+      margin: 1em auto;
+      max-width: 790px;
+   }
+   .references {
+      margin-top: 3em;
+   }
+   table td, table th {
+      padding: 3px 12px;
+   }
+   .tab, .menu {
+      padding: 2px 10px;
+      border: 1px solid #9ae;
+      border-radius: 3px;
+   }
+   .tab {
+      border-bottom-style: none;
+   }
+   .menu {
+      border-right-style: none;
+   }
+   td .menu, td .tab {
+      line-height: 1.8;
+   }
+   .example {
+      color: orange;
+      display: `r ifelse(params$kind==0,"none","inline")`
+   }
+</style>
+
+```{r init, include=FALSE}
+knitr::opts_chunk$set(fig.align="center",echo=FALSE,message=FALSE,cache=TRUE
+                     ,root.dir="C:/tmp")
+require(shiny)
+if (!("shiny" %in% loadedNamespaces()))
+   'icon' <- function(name) paste("<",name,">")
+res <- params$prm
+kind <- params$kind
+tabMap <- paste0("[",as.character(icon('globe'))," Map]{.tab}")
+tabReview <- paste0("[",as.character(icon('dashboard'))," Review]{.tab}")
+tabTable <- paste0("[",as.character(icon('th-list'))," Details]{.tab}")
+menuQuestion <- paste0("[",as.character(icon('question')),"]{.menu}")
+menuMain <- paste0("[",as.character(icon('bars')),"]{.menu}")
+```
+
+## Accenter
+
+
+"Accenter" is Shiny application to analyse results of [Marxan](http://marxan.net/) [@marxan.net; @Marxan2009]. This instrument expands deskop GIS identification tools^[e. g. QGIS [@QGIS]] and ***accent***uates on analysis of Marxan data strata based on spatial predefined and interactive requests. Named with ***er***-suffix as a reference to *instrument* and contradiction to accentor: *analyst/end-user*.
+
+Licence: MIT.
+
+Referred to PAMPAN project:
+
++ uses spatial coverage and grid cell configuration
+
++ uses data subset. All data used here are prepared by Nikita Platonov for PAMPAN without any additional restrictions for use outside of PAMPAN project.
+
+### Glossary
+
+```{r}
+da <- data.frame()
+da <- rbind(da,data.frame(name="Marxan",desc="An instrument fo spatial planning"))
+da <- rbind(da,data.frame(name="Scenario",desc="Configuration, which is used to run Marxan"))
+da <- rbind(da,data.frame(name="Selection",desc="Area of interest for spatial analysis"))
+da <- rbind(da,data.frame(name="Region",desc="Study area"))
+da <- rbind(da,data.frame(name=paste0("[",as.character(icon("paw"))," Menu item]{.menu}"),desc="Sidebar menu"))
+da <- rbind(da,data.frame(name=paste0("[",as.character(icon("cannabis"))," Tab item]{.tab}"),desc="Top-side tabs"))
+colnames(da) <- c("Term","Definition/description")
+knitr::kable(da,format="html",escape=FALSE,format.args="line-height: 2.5;")
+```
+
+### Installation and usage
+
+Shiny application with shiny-dashboard GUI:
+
++ [shinyapps.io](#) application. See also [PAMPAN application](https://wwfrussia.shinyapps.io/platini) without restrictions on under WWF Russia account
+
++ Run application on your local computer.
+
+### Get started
+
+Scenario, selection and projection are selected randomly^[If selection is manually, digitizing is requered at first].
+
+Tab `r tabMap` is active, any of `r tabReview``r tabTable` can be selected.
+
+Clicking of `r menuQuestion` shows this manual.
+
+### User interface
+
+Structure is by vertical menu bar^[Not available for small screen size, e\.g\. mobile devices].
+
++ `r menuMain` Main workspace. Available for any screens. Seratated by horizontal menu (*tabs*):
+   
+   + `r tabMap`
+   
+      Available parameters using select list with choosing a single item.
+      
+      + Select region
+
+         + Manual selection (digitizing polygons, lines and points for cells choice)
+
+         + Predefined selection (choose one from list).
+      
+         [Predefined or manual selection `r if (exists("input")) dQuote(input$rpath)` is detected in your configuraion.]{.example}
+      + Select scenario.
+        
+        [Scenario `r if (exists("input")) dQuote(input$spath)` is selected in your configuration.]{.example}
+      
+      + Select projection.
+      
+        Projections are limited by EPSG codes [@proj4]: 3571, 3572, 3573, 3574, 3575, 3576. This is the same projection class with varios longitude of origin.
+        
+        [`r if (exists("input")) dQuote(input$epsg)` is selected in your configuration.]{.example}
+
+   
+   + `r tabReview`
+      
+      + Verbal statistics about selected cells and reached targets.
+      
+      + Visual statistics.
+      
+      + Map of cells, which are selected using region coverage.
+   
+   + `r tabTable`
+      
+      Table with columns:
+
+      + CF code
+      
+      + CF name
+
+      + ...
+     
+      ```{r}
+      ret <- character()
+      if (params$kind>0) {
+         da <- res
+         ret <- knitr::kable(head(da)#,format.args="class='example'"
+                            ,caption="Example of table head rows (not formatted)")
+      }
+      ret
+      ```
+
+
++ `r menuQuestion`: Application manual.
+
++ [`r icon("info")`]{.menu}: Brief description and information about author(s).
+
++ [`r icon("user")`]{.menu}: Link to author(s)
+
++ [`r icon("github")`]{.menu}: Link to Github repository.
+
+### Known problems
+
++ `r tabMap`:  Duration of map rendering depends on number of Marxan planning units (POLYGONS geometry)
+
++ `r tabMap`: Perhaps, map rendering can be optimized due to canel of re-rendering some elements
+
++ `r tabTable`: Sometimes values are not rounded

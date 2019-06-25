@@ -151,7 +151,8 @@ if (T)
 sname <- sname0[1]
 'shapefile' <- function(fname) {
    if (isZip <- length(grep("\\.zip$",basename(fname)))>0) {
-      print(fname)
+      if (devel)
+         print(fname)
       list1 <- unzip(fname)
       ret <- sf::st_read(list1[grep("\\.shp$",list1)],quiet=TRUE)
       file.remove(list1)
@@ -249,9 +250,13 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                ##~ )
          ##~ )
          ,br()
-         ,menuItem(text="Main panel",tabName="main",icon=icon("bars"))
-         ,menuItem(text="Documentation",tabName="question", icon = icon("question"))
-         ,menuItem(text="Info",tabName="info", icon = icon("info"))
+         ,menuItem(text="Main panel",tabName="main",icon=icon("bars")
+                  ,selected=TRUE
+                  )
+         ,menuItem(text="Documentation",tabName="question",icon=icon("question")
+                  )
+         ,menuItem(text="Info",tabName="info", icon = icon("info")
+                  )
          ,br()
          ,br()
          ,br()
@@ -282,7 +287,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
          )
          ,tabItem(tabName="main"
             ,fluidRow(NULL
-               ,tabBox(width=12,title="",id="tabset1",selected=c("map","question")[1]
+               ,tabBox(width=12,title="",id="tabset1",selected="map"
                   ,tabPanel(title="Map",value="map",icon=icon("globe")
                      ,fluidRow(NULL
                         ,column(8
@@ -838,23 +843,25 @@ server <- function(input,output,session) {
          DT::formatPercentage(cname[c(5,6)],2)
    })
    output$question <- renderUI({
-      a1 <- "./shiny.log/res1.html" # tempfile()
-      bib <- file.path(tempdir(),"accenter.bib")
-      if (!file.exists(bib))
-         download.file("https://nplatonov.github.io/platt.bib",bib)
-      file.copy(bib,"platt.bib")
-      rmarkdown::render('question.Rmd'
+     # wd <- setwd("./resources");on.exit(setwd(wd))
+      a1 <- tempfile()  ## "res1.html" tempfile()
+      local_bib <- gsub("\\\\","/",file.path(tempdir(),"accenter.bib"))
+      if (!file.exists(local_bib))
+         download.file("https://nplatonov.github.io/platt.bib",local_bib)
+     # file.copy(bib,"platt.bib")
+      a1 <- rmarkdown::render('resources/question.Rmd'
                        ,output_format=rmarkdown::html_fragment()
                       # ,output_format=rmarkdown::html_vignette(css=NULL)
                        ,output_file=a1,quiet=!TRUE
-                       ,params=list(prm=data()$res5,kind=1L)
-                      # ,pandoc_args="--metadata bibliogpaphy=platt.bib"
+                       ,params=list(prm=data()$res5
+                                   ,kind=1L
+                                   ,bib=local_bib
+                                   )
                        )
       a2 <- scan(a1,what=character(),encoding="UTF-8",quiet=TRUE)
-      file.remove("platt.bib")
-     # file.remove(a1)
-      ret <- HTML(a2)
-      ret
+     # file.remove("platt.bib")
+      file.remove(a1)
+      HTML(a2)
    })
    
    ##~ output$dt_verbatim_dev <- renderPrint({
