@@ -72,12 +72,6 @@ menuMain <- paste0("[",as.character(icon('bars')),"]{.menu}")
 
 Licence: MIT.
 
-Referred to PAMPAN project:
-
-+ uses spatial coverage and grid cell configuration
-
-+ uses data subset. All data used here are prepared by Nikita Platonov for PAMPAN without any additional restrictions for use outside of PAMPAN project.
-
 ### Glossary
 
 ```{r}
@@ -175,8 +169,22 @@ Structure is by vertical menu bar^[Not available for small screen size, e\.g\. m
 
 ### Known problems
 
-+ `r tabMap`:  Duration of map rendering depends on number of Marxan planning units (POLYGONS geometry)
++ `r tabMap`: Duration of map rendering depends on number of Marxan planning units (POLYGONS geometry)
 
-+ `r tabMap`: Perhaps, map rendering can be optimized due to canel of re-rendering some elements
++ `r tabMap`: Perhaps, map rendering can be optimized due to reducing of re-rendering
 
 + `r tabTable`: Sometimes values are not rounded
+
+### What's new
+
++ `r Sys.Date()`
+
+  *ongoing...*
+
++ 2019-06-26
+
+  Supporting branches via /?branch=%s request in URL
+
++ 2019-06-25
+
+  Documentation is created and associated with `r menuQuestion` menu

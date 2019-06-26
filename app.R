@@ -6,11 +6,15 @@ height <- "612px"
 editName <- c("*** INTERACTIVE ***","Preselected (dummy)")[1]
 devel <- length(grep("^[A-Z]\\:/platt",Sys.getenv("USER")))>0 & !interactive() #.argv0()=="flipper-pampan.R"
 tryToRefuseLeafletRendering <- FALSE && devel
+p <- proc.time()
+options(ursaTimeStart=p,ursaTimeDelta=p)
+rm(p)
 css <- character()
 if (file.exists("www/custom.css")) {
    css <- readLines("www/custom.css")
    css <- paste(c("<style>",paste("   ",css),"</style>"),collapse="\n")
 }
+initName <- "Initializing..."
 regionName <- c("Pan-Arctic area")
 '.argv0' <- function() {
    arglist <- commandArgs(FALSE)
@@ -74,14 +78,6 @@ regionName <- c("Pan-Arctic area")
    }
    ret
 }
-dpath <- "."
-mpath <- file.path(dpath,"common")
-print(c(dpath=dpath,mpath=mpath),quote=FALSE)
-gpath <- file.path(dpath,"results")
-rpath <- file.path(dpath,"predefined")
-   p <- proc.time()
-   options(ursaTimeStart=p,ursaTimeDelta=p)
-   rm(p)
 if (devel)
    .elapsedTime("package load -- start")
 suppressMessages({
@@ -98,57 +94,6 @@ suppressMessages({
 })
 if (devel)
    .elapsedTime("package load -- finish")
-rname0 <- dir(path=rpath,pattern="\\.(geojson|sqlite|shp)(\\.(zip))*$",full.names=TRUE)
-rname1 <- c(editName,gsub("\\.shp(\\.zip)*","",basename(rname0)))#[1]
-spath0 <- list.dirs(gpath,full.names=FALSE,recursive=FALSE)#[-1]
-spath0 <- grep("sc\\d{2}(-\\d{8})*",spath0,value=TRUE)
-spath0 <- grep("(spf|blm|numitns|hide|prev|delete|remove)"
-              ,spath0,value=TRUE,invert=TRUE,ignore.case=TRUE)
-spath0 <- spath0[nchar(spath0)>0]
-#spath0 <- basename(dirname(dir(path=file.path(gpath,spath0)
-#                             ,pattern="^freq.shp(\\.zip)*$",full.names=TRUE)))
-#str(spath0)
-if (!length(spath0))
-   stop("Scenarios dir is empty")
-mdname <- dir(path=file.path(dpath,"scenarios"),pattern="\\.xlsx$",full.names=TRUE)
-if (googleDrive <- length(mdname)!=1) {
-   gsheetFile <- "./scenarios/gsheet.id"
-   if (file.exists(gsheetFile))
-      gsheet <- readLines(gsheetFile,warn=FALSE)
-   else {
-      gsheetFile <- dir(path="./scenarios",pattern="\\.gsheet$"
-                       ,full.names=TRUE,recursive=FALSE)
-      if (length(gsheetFile)==1)
-         gsheet <- jsonlite::fromJSON(gsheetFile)$doc_id
-      else
-         gsheet <- stop("cannot get scenarios sheet files")
-   }
-   mdname <- tempfile(fileext=".xlsx") ## tmpdir=file.path(dpath,"scenarios"),
-   download.file(paste0("https://docs.google.com/spreadsheets/export?id="
-                       ,gsheet,"&format=xlsx"),mdname,mode="wb")
-}
-scname <- readxl::read_excel(mdname,sheet="Scenarios")
-cfname <- readxl::read_excel(mdname,sheet="CF_list")
-if (googleDrive)
-   file.remove(mdname)
-scname <- scname[,c("#","Name")]
-cfname <- cfname[,c("CF_code","File_name","CF_name")]
-scind <- match(as.integer(gsub("sc(\\d+).*","\\1",spath0)),scname$'#')
-#if (length(ind <- grep("^(input|output|pulayer)$",basename(spath0))))
-#   spath0 <- spath0[-ind]
-sname0 <- unname(sapply(file.path(gpath,spath0),function(x) {
-   fname <- file.path(x,"scenario.txt")
-   if (file.exists(fname)) readLines(fname) else basename(x)
-}))
-sname0 <- sapply(strsplit(sample(sname0),split="\\s+--\\s+"),function(x) {
-   paste(x,collapse=", ")
-})
-#spath <- file.path(gpath,spath0)[1] ## not used anywhere
-if (F)
-   sname0 <- spath0
-if (T)
-   sname0 <- paste0(scname[["#"]][scind],": ",scname[["Name"]][scind])
-sname <- sname0[1]
 'shapefile' <- function(fname) {
    if (isZip <- length(grep("\\.zip$",basename(fname)))>0) {
       if (devel)
@@ -163,8 +108,7 @@ sname <- sname0[1]
       return(ret)
    sf::st_zm(ret)
 }
-Fpu <- dir(path=mpath,pattern="^pulayer\\.shp\\.zip$",recursive=TRUE,full.names=TRUE)
-pu <- shapefile(Fpu)
+dpath <- "."
 'polarmap' <- function(epsg,centered=TRUE,data=NULL) {
    if (is.character(epsg))
       epsg <- as.integer(epsg)
@@ -176,7 +120,8 @@ pu <- shapefile(Fpu)
    crsArctic <- leafletCRS(crsClass="L.Proj.CRS",code=paste0("EPSG:",epsg)
                           ,proj4def=sf::st_crs(epsg)$proj4string
                           ,resolutions=resolutions,origin=origin,bounds=bounds)
-   str(crsArctic)
+   if (devel)
+      str(crsArctic)
    if (is.null(data))
       m <- leaflet(options=leafletOptions(crs=crsArctic,minZoom=3,maxZoom=9))
    else
@@ -222,7 +167,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
       ,sidebarMenu(id="tabs"
         # ,HTML("<center>")
          ,img(src=switch(Sys.getenv("COMPUTERNAME")
-                        ,MARLIN="http://sevin-expedition.ru/netcat_files/img/logo-sev.gif"
+                       # ,MARLIN="http://sevin-expedition.ru/netcat_files/img/logo-sev.gif"
                         ,"https://new.wwf.ru/assets/img/logo.svg")
              ,width=40,style="opacity:0.5;")
         # ,HTML("</center>")
@@ -266,9 +211,9 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                ##~ ,style="padding-left: 15px;"))
          ,menuItem(text="Nikita Platonov"
                   ,href="https://orcid.org/0000-0001-7196-7882",icon=icon("user"))
-         ,menuItem(text=" ",icon=icon("github"),
-                   ##~ href="https://stackoverflow.com/questions/36679944/mapview-for-shiny")
-                   href="https://github.com/nplatonov/accenter/")
+         ,menuItem(text=" ",icon=icon("github")
+                  ,href="https://github.com/nplatonov/accenter/"
+                  )
       )
    )
    ,dashboardBody(id="resetable"
@@ -296,13 +241,18 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                         )
                         ,column(4
                            ,selectInput("rpath","Selection"
-                                       ,list('Manual'=rname1[1],'Preselected'=rname1[-1])
-                                       ,selected=ifelse(length(rname1)==1,rname1,sample(rname1,1))
+                                       ##~ ,list('Manual'=rname1[1],'Preselected'=rname1[-1])
+                                       ##~ ,selected=ifelse(length(rname1)==1,rname1,sample(rname1,1))
+                                       ,initName
+                                       ,selected=initName
                                       # ,selected=grep("INTERACTIVE",rname1,value=TRUE,ignore.case=TRUE)
                                        ,width="500px"
                                        )
-                           ,selectInput("spath","Scenario",sname0
-                                       ,selected=sample(sname0,1)
+                           ,selectInput("spath","Scenario"
+                                       ,initName
+                                       ,selected=initName
+                                       ##~ ,sname0
+                                       ##~ ,selected=sample(sname0,1)
                                       # ,selected=grep("sc08",sname0,value=TRUE)
                                        ,width="500px"
                                        )
@@ -347,23 +297,127 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
    ) ## dashboardBody
 )
 server <- function(input,output,session) {
-   if (T & devel)
+   if (F & devel)
       session$onSessionEnded(stopApp)
    exchange <- reactiveValues(edits=NULL,puvspr=NULL,spec=NULL#,prob=NULL
                              ,freq=NULL,freq3=NULL,overlay=NULL,res=NULL)
   # scenario <- observeEvent(input$spath,{
-   scenario <- observe({
+   branch <- reactive({
+      reserve <- file.path("branch","2.2")
+      hpath <- c(".","..","../..",reserve,file.path(reserve,".."))
+      if (devel)
+         .elapsedTime("branch (reactive) -- start")
+      branch <- parseQueryString(session$clientData$url_search)[['branch']]
+      if (is.character(branch)) {
+         str(branch)
+         bpath <- file.path(dpath,"branch",branch)
+         if (!dir.exists(bpath))
+            bpath <- dpath
+      }
+      else
+         bpath <- dpath
+      mpath <- file.path(bpath,hpath,"common")
+      mpath <- mpath[dir.exists(mpath)][1]
+      rpath <- file.path(bpath,hpath,"predefined")
+      rpath <- rpath[dir.exists(rpath)][1]
+      rname0 <- dir(path=rpath,pattern="\\.(geojson|sqlite|shp)(\\.(zip))*$",full.names=TRUE)
+      rname1 <- c(editName,gsub("\\.shp(\\.zip)*","",basename(rname0)))#[1]
+      Fpu <- dir(path=mpath,pattern="^pulayer\\.shp\\.zip$",recursive=TRUE,full.names=TRUE)
+      pu <- shapefile(Fpu)
+      print(c(dpath=dpath,bpath=bpath,mpath=mpath),quote=FALSE)
+      gpath <- file.path(bpath,hpath,"results")
+      gpath <- gpath[dir.exists(gpath)][1]
+      spath0 <- list.dirs(gpath,full.names=FALSE,recursive=FALSE)#[-1]
+      spath0 <- grep("sc\\d{2}(-\\d{8})*",spath0,value=TRUE)
+      spath0 <- grep("(spf|blm|numitns|hide|prev|delete|remove)"
+                    ,spath0,value=TRUE,invert=TRUE,ignore.case=TRUE)
+      spath0 <- spath0[nchar(spath0)>0]
+      #spath0 <- basename(dirname(dir(path=file.path(gpath,spath0)
+      #                             ,pattern="^freq.shp(\\.zip)*$",full.names=TRUE)))
+      #str(spath0)
+      if (!length(spath0))
+         stop("Scenarios dir is empty")
+      mdname <- dir(path=file.path(bpath,"scenarios"),pattern="\\.xlsx$",full.names=TRUE)
+      if (googleDrive <- length(mdname)!=1) {
+         cpath <- file.path(bpath,hpath,"scenarios")
+         cpath <- cpath[dir.exists(cpath)][1]
+         gsheetFile <- file.path(cpath,"gsheet.id")
+         if (file.exists(gsheetFile))
+            gsheet <- readLines(gsheetFile,warn=FALSE)
+         else {
+            gsheetFile <- dir(path=cpath,pattern="\\.gsheet$"
+                             ,full.names=TRUE,recursive=FALSE)
+            if (length(gsheetFile)==1)
+               gsheet <- jsonlite::fromJSON(gsheetFile)$doc_id
+            else
+               gsheet <- stop("cannot get scenarios sheet files")
+         }
+         mdname <- tempfile(fileext=".xlsx") ## tmpdir=file.path(dpath,"scenarios"),
+         download.file(paste0("https://docs.google.com/spreadsheets/export?id="
+                             ,gsheet,"&format=xlsx"),mdname,mode="wb")
+      }
+      scname <- readxl::read_excel(mdname,sheet="Scenarios")
+      cfname <- readxl::read_excel(mdname,sheet="CF_list")
+      if (googleDrive)
+         file.remove(mdname)
+      scname <- scname[,c("#","Name")]
+      cfname <- cfname[,c("CF_code","File_name","CF_name")]
+      scind <- match(as.integer(gsub("sc(\\d+).*","\\1",spath0)),scname$'#')
+      #if (length(ind <- grep("^(input|output|pulayer)$",basename(spath0))))
+      #   spath0 <- spath0[-ind]
+      sname0 <- unname(sapply(file.path(gpath,spath0),function(x) {
+         fname <- file.path(x,"scenario.txt")
+         if (file.exists(fname)) readLines(fname) else basename(x)
+      }))
+      sname0 <- sapply(strsplit(sample(sname0),split="\\s+--\\s+"),function(x) {
+         paste(x,collapse=", ")
+      })
+      #spath <- file.path(gpath,spath0)[1] ## not used anywhere
+      if (F)
+         sname0 <- spath0
+      if (T)
+         sname0 <- paste0(scname[["#"]][scind],": ",scname[["Name"]][scind])
+      sname <- sname0[1]
+      updateSelectInput(session,"spath",choices=sname0,selected=sample(sname0,1))
+      updateSelectInput(session,"rpath"
+                       ,choices=list('Manual'=rname1[1],'Preselected'=rname1[-1])
+                       ,selected=ifelse(length(rname1)==1,rname1,sample(rname1,1))
+                       )
+      if (devel)
+         .elapsedTime("branch (reactive) -- finish")
+      list(gpath=gpath,sname0=sname0,spath0=spath0,cfname=cfname,pu=pu
+          ,mpath=mpath,rname0=rname0)
+   })
+   scenario <- observe({ ## 'scenario' without assignment 
       if (devel)
          .elapsedTime("scenario (observe) -- start")
       ##~ input$epsg
       ##~ input$spath
       ##~ input$rpath
-      showModal(modalDialog(title = "Data verification in progress","Please wait"
-                           ,size="s",easyClose = TRUE,footer = NULL))
+      action <- ifelse(input$spath==initName,"Branch initialization"
+                                            ,"Data verification")
+      showModal(modalDialog(title=paste(action,"in progress")
+                           ,"Please wait",size="s",easyClose = TRUE,footer = NULL))
      # .elapsedTime("observe -- start")
       epsg <- as.integer(input$epsg)
-      spath <- file.path(gpath,spath0[match(input$spath,sname0)])
+      gpath <- branch()$gpath
+      spath0 <- branch()$spath0
+      sname0 <- branch()$sname0
+      ind <- match(input$spath,sname0)
+      if (is.na(ind))
+         ind <- sample(seq_along(sname0),1)
+      spath <- file.path(gpath,spath0[ind])
+      if (FALSE) {
+         cat("------------\n")
+         print(spath0)
+         print(c(gpath=gpath))
+         print(c('input$spath'=input$spath))
+         print(sname0)
+         print(spath)
+         cat("------------\n")
+      }
       freq <- shapefile(file.path(spath,"freq.shp.zip"))
+      pu <- branch()$pu
       freq$ID <- pu$ID
       freq$value <- freq$sum/max(freq$sum) ## subject to be overestimated
      # prob <- freq
@@ -377,7 +431,7 @@ server <- function(input,output,session) {
       Fpuvspr <- dir(path=spath,pattern="puvspr\\.dat(\\.gz)*$"
                     ,recursive=TRUE,full.names=TRUE)
       if (!length(Fpuvspr))
-         Fpuvspr <- dir(path=mpath,pattern="puvspr\\.dat(\\.gz)*$"
+         Fpuvspr <- dir(path=branch()$mpath,pattern="puvspr\\.dat(\\.gz)*$"
                        ,recursive=TRUE,full.names=TRUE)
       puvspr <- read.csv(Fpuvspr)
      # freq <- aggregate(freq,by=list(freq$sum),mean)["sum"]
@@ -450,6 +504,7 @@ server <- function(input,output,session) {
       else {
         # exchange$edits <- NULL
         # rname <- rname0[match(input$rpath,gsub("\\.(zip)","",basename(rname0)))]
+         rname0 <- branch()$rname0
          rname <- rname0[grep(input$rpath,basename(rname0))]
          s <- shapefile(rname)
          if (FALSE) {
@@ -491,11 +546,11 @@ server <- function(input,output,session) {
      # res <- sf::st_intersection(freq,s)
       print(c(careful=length(sf::st_geometry(s))))
       careful <- length(sf::st_geometry(s))!=1
-      showModal(modalDialog(title = "Find intersection...","Please wait"
+      showModal(modalDialog(title = "Find intersection...","Close to finish"
                            ,size="s",easyClose = TRUE,footer = NULL))
-      file.remove(dir(path="./shiny.log",pattern="^res.+\\.(cpg|dbf|prj|shp|shx)"
-                     ,full.names=TRUE))
       if (devel) {
+         file.remove(dir(path="./shiny.log",pattern="^res.+\\.(cpg|dbf|prj|shp|shx)"
+                        ,full.names=TRUE))
          sf::st_write(freq,"./shiny.log/res-freq.shp",quiet=TRUE)
          sf::st_write(s,"./shiny.log/res-s.shp",quiet=TRUE)
       }
@@ -558,6 +613,7 @@ server <- function(input,output,session) {
      # cat("--------------------------\n")
      # str(res5name)
      # cat("==========================\n")
+      cfname <- branch()$cfname
       res5$name <- cfname$CF_name[match(res5$id,as.integer(cfname$CF_code))]
       res5$prop <- with(res5,selected/reached) ## 7
       if (TRUE)
@@ -672,6 +728,7 @@ server <- function(input,output,session) {
       if (devel)
          .elapsedTime("review leaflet -- start")
       if (T) {
+         pu <- branch()$pu
          if (!withOverlap) {
             sf::st_agr(d) <- "constant"
             cd <- unclass(sf::st_transform(sf::st_geometry(sf::st_centroid(d)),4326))
@@ -765,7 +822,7 @@ server <- function(input,output,session) {
       )
    })
    output$cells <- renderText({
-      paste0("Cells in ",regionName,": ",nrow(pu),". "
+      paste0("Cells in ",regionName,": ",nrow(branch()$pu),". "
             ,"Cells in selection: ",nrow(data()$res),".")
    })
    output$species <- renderText({

@@ -14,6 +14,7 @@ shiny.log/
 shiny.dev/
 resources/question*/
 resources/question.html
+branch/
 
 **/md5
 FarMenu.ini
