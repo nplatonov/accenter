@@ -49,8 +49,11 @@ regionName <- c("Pan-Arctic area")
 }
 'infoTab' <- function() {
    opW <- options(warn=2) ## 2
-   if (inherits(ret <- try(includeMarkdown("./accenter-info.md")),"try-error"))
-      ret <- helpText("Should be provided in './accenter-info.md' file")
+   if (inherits(ret <- try(includeMarkdown("./resources/info.md")),"try-error"))
+      ret <- helpText(paste("Welcome! For detail click to"
+                          # ,as.character(icon("question"))
+                           ,"'?'"
+                           ,"icon on sidebar panel."))
    options(opW)
    ret
 }

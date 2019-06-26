@@ -14,6 +14,7 @@ shiny.log/
 shiny.dev/
 resources/question*/
 resources/question.html
+resources/info.md
 branch/
 
 **/md5

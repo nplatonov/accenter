@@ -4,7 +4,7 @@ require(rsconnect)
 options(rsconnect.http=c("rcurl","curl","internal")[1]
        ,rsconnect.check.certificate=FALSE
        ,rsconnect.http.verbose=FALSE)
-account <- c("devel","release")[1]
+account <- c("devel","release")[2]
 opShiny <- getOption(switch(account[1],devel="rsconnect",release="rsconnectWWF"))
 if (is.null(opShiny)) {
    message("Expected record of 'rsconnect' option (example):")
@@ -21,6 +21,8 @@ appname <- switch(account[1],devel="accenter",release="platini")
 appfiles <- c("predefined","www","branch","app.R")
 if (account %in% c("devel"))
    appfiles <- c("common","results","scenarios",appfiles)
+if (account %in% c("release"))
+   appfiles <- c("resources/info.md",appfiles)
 if (TRUE) {
    list1 <- dir(path=appfiles,recursive=TRUE,full.names=TRUE)
    list1 <- list1[grep("(^_.+|^output.+|\\.(webp|png|R)$)",basename(list1),invert=TRUE)]
