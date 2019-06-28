@@ -21,13 +21,13 @@ appname <- switch(account[1],devel="accenter",release="platini")
 appfiles <- c("predefined","www","branch","app.R")
 if (account %in% c("devel"))
    appfiles <- c("common","results","scenarios",appfiles)
-if (account %in% c("release"))
-   appfiles <- c("resources/info.md",appfiles)
 if (TRUE) {
    list1 <- dir(path=appfiles,recursive=TRUE,full.names=TRUE)
    list1 <- list1[grep("(^_.+|^output.+|\\.(webp|png|R)$)",basename(list1),invert=TRUE)]
    list1 <- list1[grep("(spf|blm|numitns)",basename(dirname(list1)),invert=TRUE)]
    appfiles <- unique(c(list1,"resources/question.Rmd","app.R"))
+   if (account %in% c("release"))
+      appfiles <- c(appfiles,"resources/info.md")
 }
 deployApp(appName=appname,appFiles=appfiles,account=opShiny$name)
 options(opW)
