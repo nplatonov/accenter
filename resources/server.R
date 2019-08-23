@@ -1,14 +1,14 @@
 server <- function(input,output,session) {
-   if (F & devel)
+   if (T & devel)
       session$onSessionEnded(stopApp)
    exchange <- reactiveValues(edits=NULL,puvspr=NULL,spec=NULL#,prob=NULL
                              ,freq=NULL,freq3=NULL,overlay=NULL,res=NULL)
   # scenario <- observeEvent(input$spath,{
    branch <- reactive({
-      reserve <- file.path("branch","2.2")
-      hpath <- c(".","..","../..",reserve,file.path(reserve,".."))
       if (devel)
          .elapsedTime("branch (reactive) -- start")
+      reserve <- file.path("branch","3.0")
+      hpath <- c(".","..","../..",reserve,file.path(reserve,".."))
       branch <- parseQueryString(session$clientData$url_search)[['branch']]
       if (is.character(branch)) {
          str(branch)
@@ -19,14 +19,24 @@ server <- function(input,output,session) {
       else
          bpath <- dpath
       mpath <- file.path(bpath,hpath,"common")
-      mpath <- mpath[dir.exists(mpath)][1]
+      mpath <- mpath[dir.exists(mpath)] #[1]
       rpath <- file.path(bpath,hpath,"predefined")
       rpath <- rpath[dir.exists(rpath)][1]
       rname0 <- dir(path=rpath,pattern="\\.(geojson|sqlite|shp)(\\.(zip))*$",full.names=TRUE)
       rname1 <- c(editName,gsub("\\.shp(\\.zip)*","",basename(rname0)))#[1]
-      Fpu <- dir(path=mpath,pattern="^pulayer\\.shp\\.zip$",recursive=TRUE,full.names=TRUE)
-      pu <- shapefile(Fpu)
+     # Fpu <- dir(path=mpath,pattern="^pulayer\\.shp\\.zip$",recursive=TRUE,full.names=TRUE)
+      Fpuvspr <- lapply(mpath,function(mpath2)
+                          dir(path=mpath2,pattern="^puvspr\\.dat(\\.(gz|zip))*$"
+                          ,recursive=TRUE,full.names=TRUE))
+      indM <- which(sapply(Fpuvspr,function(x) length(x)>0))[1]
+      Fpu <- lapply(mpath,function(mpath2)
+                          dir(path=mpath2,pattern="^pulayer\\.shp\\.zip$"
+                          ,recursive=TRUE,full.names=TRUE))
+      Fpu <- Fpu[[which(sapply(Fpu,function(x) length(x)>0))[1]]]
+      mpath <- mpath[indM]
+     # bpath <- dirname(mpath)
       print(c(dpath=dpath,bpath=bpath,mpath=mpath),quote=FALSE)
+      pu <- shapefile(Fpu) ## Fpu
       gpath <- file.path(bpath,hpath,"results")
       gpath <- gpath[dir.exists(gpath)][1]
       spath0 <- list.dirs(gpath,full.names=FALSE,recursive=FALSE)#[-1]
@@ -39,7 +49,7 @@ server <- function(input,output,session) {
       #str(spath0)
       if (!length(spath0))
          stop("Scenarios dir is empty")
-      mdname <- dir(path=file.path(bpath,"scenarios"),pattern="\\.xlsx$",full.names=TRUE)
+      mdname <- dir(path=file.path(gpath,"..","scenarios"),pattern="\\.xlsx$",full.names=TRUE)
       if (googleDrive <- length(mdname)!=1) {
          cpath <- file.path(bpath,hpath,"scenarios")
          cpath <- cpath[dir.exists(cpath)][1]
@@ -110,7 +120,7 @@ server <- function(input,output,session) {
       showModal(modalDialog(title=paste(action,"in progress")
                            ,"Please wait",size="s",easyClose = TRUE,footer = NULL))
      # .elapsedTime("observe -- start")
-      epsg <- as.integer(input$epsg)
+      epsg <- if (input$epsg==initName) NA else as.integer(input$epsg)
       gpath <- branch()$gpath
       spath0 <- branch()$spath0
       sname0 <- branch()$sname0
@@ -520,6 +530,43 @@ server <- function(input,output,session) {
                          )
       }
       m
+   })
+   output$plotlyHist <- renderPlotly({
+      d <- data()
+      da <- rbind(data.frame(freq="all",value=d$freq$sum)
+                 ,data.frame(freq="selected",value=d$res$sum))
+      p <- plot_ly(da,x=~value,type="histogram",histnorm="probability",split=~freq)
+     # prm <- plotlyOpt()
+     # prm$config[[1]] <- prm$layout[[1]] <- p
+     # p <- do.call("layout",prm$layout)
+      p <- layout(p
+                 ,legend=list(x=0.3,y=0.9)
+                 ,xaxis=list(title="Occurrence",zeroline=F,titlefont=list(size=12))
+                 )
+      p <- config(p
+                 ,displaylogo=FALSE
+                 ,scrollZoom=TRUE)
+     # p <- do.call("config",prm$config)
+      p
+   })
+   output$plotlyBox <- renderPlotly({
+      d <- data()
+      da <- rbind(data.frame(freq="all",value=d$freq$sum)
+                 ,data.frame(freq="selected",value=d$res$sum))
+      p <- plot_ly(da,y=~value,type="box",split=~freq,showlegend=F)
+     # prm <- plotlyOpt()
+     # prm$config[[1]] <- prm$layout[[1]] <- p
+     # p <- do.call("layout",prm$layout)
+      p <- layout(p
+                 ,legend=list(orientation="v")
+                 ,xaxis=list(title="")
+                 ,yaxis=list(title="",zeroline=F)
+                 )
+      p <- config(p
+                 ,displaylogo=FALSE
+                 ,scrollZoom=TRUE)
+      # p <- do.call("config",prm$config)
+      p
    })
    output$selectstat <- renderPlot({
       d <- data()

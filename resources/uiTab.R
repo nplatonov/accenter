@@ -111,15 +111,21 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                   ) ## tabPanel
                   ,tabPanel(title="Review",value="review",icon=icon("dashboard")
                      ,fluidRow(NULL
-                        ,column(4
+                        ,column(2
                            ,textOutput("cells")
                            ,br()
                            ,textOutput("species")
                            ,br()
                            ,verbatimTextOutput("dt_verbatim")
                         )
+                        ##~ ,column(2
+                           ##~ ,plotOutput("selectstat")#,width="300px")
+                        ##~ )
+                        ,column(2
+                           ,plotlyOutput("plotlyBox")#,width="300px")
+                        )
                         ,column(4
-                           ,plotOutput("selectstat",width="300px")
+                           ,plotlyOutput("plotlyHist")#,width="300px")
                         )
                         ,column(4
                            ,leafletOutput("selectLeaflet")

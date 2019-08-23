@@ -25,9 +25,31 @@ if (TRUE) {
    list1 <- dir(path=appfiles,recursive=TRUE,full.names=TRUE)
    list1 <- list1[grep("(^_.+|^output.+|\\.(webp|png|R)$)",basename(list1),invert=TRUE)]
    list1 <- list1[grep("(spf|blm|numitns)",basename(dirname(list1)),invert=TRUE)]
-   appfiles <- unique(c(list1,"resources/question.Rmd","app.R"))
+   appfiles <- unique(c(list1,"resources/question.Rmd"
+                       ,dir(path="resources",pattern="\\S\\.R$",full.names=TRUE)
+                       ,"app.R"))
    if (account %in% c("release"))
       appfiles <- c(appfiles,"resources/info.md")
+}
+if (FALSE) {
+   invisible(lapply(sample(appfiles),function(src) {
+      dpath <- "C:/tmp/platini"
+      if (dir.exists(src)) {
+         lapply(dir(path=src,recursive=TRUE,full.names=TRUE), function(f) {
+            dst <- file.path(dpath,f)
+            if (!dir.exists(dirname(dst)))
+               dir.create(dirname(dst),recursive=TRUE)
+            file.copy(src,dst,copy.date=TRUE)
+         })
+      }
+      else {
+         dst <- file.path(dpath,src)
+         if (!dir.exists(dirname(dst)))
+            dir.create(dirname(dst),recursive=TRUE)
+         file.copy(src,dst,copy.date=TRUE)
+      }
+   }))
+   q()
 }
 deployApp(appName=appname,appFiles=appfiles,account=opShiny$name)
 options(opW)

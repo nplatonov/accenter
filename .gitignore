@@ -12,6 +12,7 @@ results/**/*.png
 results/**/*.webp
 shiny.log/
 shiny.dev/
+dev/
 resources/question*/
 resources/question.html
 resources/info.md

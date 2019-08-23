@@ -181,6 +181,10 @@ Structure is by vertical menu bar^[Not available for small screen size, e\.g\. m
 
   *ongoing...*
 
++ 2019-08-23
+
+  Plotly boxes and bars for comparison between all region and selected area(s).
+
 + 2019-06-26
 
   Supporting branches via /?branch=%s request in URL

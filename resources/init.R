@@ -91,6 +91,7 @@ suppressMessages({
    require(mapedit)
   # require(ursa)
    require(DT)
+   require(plotly)
    requireNamespace("lwgeom")
 })
 if (devel)
@@ -121,7 +122,7 @@ dpath <- "."
    crsArctic <- leafletCRS(crsClass="L.Proj.CRS",code=paste0("EPSG:",epsg)
                           ,proj4def=sf::st_crs(epsg)$proj4string
                           ,resolutions=resolutions,origin=origin,bounds=bounds)
-   if (devel)
+   if (F & devel)
       str(crsArctic)
    if (is.null(data))
       m <- leaflet(options=leafletOptions(crs=crsArctic,minZoom=3,maxZoom=9))
@@ -144,7 +145,7 @@ dpath <- "."
          m <- setView(m,0,90,4)
         # m <- setView(m,12.57,55.687,12) ## Kopenhagen
    }
-   m <- addTiles(m,urlTemplate=paste0("http://{s}.tiles.arcticconnect.ca/osm_"
+   m <- addTiles(m,urlTemplate=paste0("https://{s}.tiles.arcticconnect.ca/osm_"
                                      ,epsg,"/{z}/{x}/{y}.png")
                 ,attribution="Map: © ArcticConnect. Data: © OpenStreetMap contributors"
                 ,options=tileOptions(subdomains="abc"
@@ -156,3 +157,26 @@ dpath <- "."
 }
 #Fpu <- dir(path=mpath,pattern="^pulayer\\.shp\\.zip$",recursive=TRUE,full.names=TRUE)
 #pu <- shapefile(Fpu)
+'plotlyOpt' <- function() {
+   fs <- 12
+   axis <- list(tickfont=list(size=fs),titlefont=list(size=fs),zeroline=F,showgrid=T)
+   legend <- list(font=list(size=round(0.9*fs)))
+   title <- list(font=list(size=fs),color='yellow')
+   layout <- list(NULL,title=title,legend=legend,xaxis=axis,yaxis=axis)
+   config <- list(NULL
+                 ,displaylogo=FALSE
+                 ,displayModeBar=c("hover","true")[2]
+                 ,scrollZoom=TRUE
+                 ,modeBarButtonsToRemove=list(NULL
+                                             ,"zoom2d","pan2d","toggleSpikelines"
+                                             ,"zoomIn2d","zoomOut2d"
+                                             ,"autoScale2d","resetScale2d"
+                                            # ,"hoverClosestCartesian","hoverCompareCartesian"
+                                             ,"select2d","lasso2d"
+                                             )
+                # ,modeBarButtonsToAdd=list("hoverCompareCartesian")
+                 ,setBackground="orange"
+                 ,toImageButtonOptions=list(width=760,height=540,scale=1)
+                 )
+   list(layout=layout,config=config)
+}
