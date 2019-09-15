@@ -4,8 +4,20 @@ require(rsconnect)
 options(rsconnect.http=c("rcurl","curl","internal")[1]
        ,rsconnect.check.certificate=FALSE
        ,rsconnect.http.verbose=FALSE)
-account <- c("devel","release")[2]
-opShiny <- getOption(switch(account[1],devel="rsconnect",release="rsconnectWWF"))
+account <- c("devel","release","emulate")[2]
+deploy <- TRUE
+arglist <- commandArgs(TRUE)
+if (length(arglist)) {
+   if (length(ind <- grep("dev",arglist)))
+      account <- "devel"
+   else if (length(ind <- grep("rel",arglist)))
+      account <- "release"
+   else if (length(ind <- grep("emu",arglist)))
+      account <- "emulate"
+   if (length(ind <- grep("^local",arglist)))
+      deploy <- FALSE
+}
+opShiny <- getOption(switch(account[1],release="rsconnectWWF","rsconnect"))
 if (is.null(opShiny)) {
    message("Expected record of 'rsconnect' option (example):")
    opShiny <- list(name="yourname"
@@ -17,8 +29,8 @@ if (is.null(opShiny)) {
    stop("Authentification data are not receieved")
 }
 with(opShiny,setAccountInfo(name=name,token=token,secret=secret))
-appname <- switch(account[1],devel="accenter",release="platini")
-appfiles <- c("predefined","www","branch","app.R")
+appname <- switch(account[1],release="platini","accenter")
+appfiles <- c("www","branch","app.R") ## -"predefined"
 if (account %in% c("devel"))
    appfiles <- c("common","results","scenarios",appfiles)
 if (TRUE) {
@@ -28,12 +40,14 @@ if (TRUE) {
    appfiles <- unique(c(list1,"resources/question.Rmd"
                        ,dir(path="resources",pattern="\\S\\.R$",full.names=TRUE)
                        ,"app.R"))
-   if (account %in% c("release"))
+   if (!(account %in% c("devel")))
       appfiles <- c(appfiles,"resources/info.md")
 }
-if (FALSE) {
+if (!deploy) {
+   dpath <- paste0("C:/tmp/",appname)
+   if (dir.exists(dpath))
+      unlink(dpath,recursive=TRUE,force=TRUE)
    invisible(lapply(sample(appfiles),function(src) {
-      dpath <- "C:/tmp/platini"
       if (dir.exists(src)) {
          lapply(dir(path=src,recursive=TRUE,full.names=TRUE), function(f) {
             dst <- file.path(dpath,f)
@@ -49,8 +63,8 @@ if (FALSE) {
          file.copy(src,dst,copy.date=TRUE)
       }
    }))
-   q()
 }
-deployApp(appName=appname,appFiles=appfiles,account=opShiny$name)
+if (deploy)
+   deployApp(appName=appname,appFiles=appfiles,account=opShiny$name)
 options(opW)
 warnings()

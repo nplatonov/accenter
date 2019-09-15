@@ -56,7 +56,7 @@ body {
    width:600px;
 }
 .skin-blue .nav > li > a {
-   padding: 8px 9vw 8px 1vw; /* 4px 8vw 4px 2px */
+   padding: 8px 7.5vw 8px 0.5vw; /* 4px 8vw 4px 2px */
 }
 .skin-blue .sidebar-menu > li.active > a,
 .skin-blue .sidebar-menu > li:hover > a {
@@ -145,7 +145,10 @@ body {
    display: none;
 }
 @media screen {
-.skin-blue #viewerLeaflet, .skin-blue #viewerMapview, .skin-blue #editor-map {
+.skin-blue #viewerLeaflet,
+.skin-blue #viewerMapview,
+.skin-blue #editor-map,
+.skin-blue #geopuLeaflet {
    height: 78vh !important;
 }}
 /* 

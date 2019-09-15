@@ -75,7 +75,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
          )
          ,tabItem(tabName="main"
             ,fluidRow(NULL
-               ,tabBox(width=12,title="",id="tabset1",selected="map"
+               ,tabBox(width=12,title="",id="tabset1",selected=c("map","details","geopu")[1]
                   ,tabPanel(title="Map",value="map",icon=icon("globe")
                      ,fluidRow(NULL
                         ,column(8
@@ -104,7 +104,14 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                                        ,selected=initName
                                        ##~ ,epsgList
                                        ##~ ,selected=3575
-                                       ,width="500px"
+                                       ,width="160px"
+                                       )
+                           ,selectInput("freq","Marxan output"
+                                       ,c("frequency","best run")
+                                       ,selected="frequency"
+                                       ##~ ,epsgList
+                                       ##~ ,selected=3575
+                                       ,width="160px"
                                        )
                         )
                      ) ## fluidRow
@@ -137,6 +144,27 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                         ,column(12
                           # ,h3("Targets Achievement"),
                            ,DT::DTOutput("tbl")
+                        )
+                     ) ## fluidRow
+                  ) ##tabPanel
+                  ,tabPanel(title="Prop",value="geopu",icon=icon("map")
+                     ,fluidRow(NULL
+                        ,column(2)
+                        ,column(8
+                           ,uiOutput("geopu")
+                          # ,DT::DTOutput("tbl")
+                        )
+                        ,column(2
+                           ,htmlOutput("selectedScenario")
+                           ,br()
+                           ,br()
+                           ,htmlOutput("selectedEPSG")
+                           ,br()
+                           ,br()
+                           ,selectInput("puprm","Property"
+                                       ,c("Data coverage","Layer overlap"
+                                         ,"Representative","Distinctive")
+                                       ,selected="Data coverage")
                         )
                      ) ## fluidRow
                   ) ##tabPanel

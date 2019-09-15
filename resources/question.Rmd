@@ -4,7 +4,7 @@ params:
    prm: NULL
    bib: C:/platt/article/platt.bib
 pagetitle: Accenter -- documentation
-title: "\0"
+title: "[]{style=\"display: none;\"}"
 author: "Nikita Platonov"
 link-citations: true
 bibliography: "`r params$bib`"
@@ -61,6 +61,7 @@ kind <- params$kind
 tabMap <- paste0("[",as.character(icon('globe'))," Map]{.tab}")
 tabReview <- paste0("[",as.character(icon('dashboard'))," Review]{.tab}")
 tabTable <- paste0("[",as.character(icon('th-list'))," Details]{.tab}")
+tabProp <- paste0("[",as.character(icon('map'))," Prop]{.tab}")
 menuQuestion <- paste0("[",as.character(icon('question')),"]{.menu}")
 menuMain <- paste0("[",as.character(icon('bars')),"]{.menu}")
 ```
@@ -147,7 +148,11 @@ Structure is by vertical menu bar^[Not available for small screen size, e\.g\. m
       + CF name
 
       + ...
-     
+
+   + `r tabProp`
+      
+      Map of selected characteristics or property of input data.
+      
       ```{r}
       ret <- character()
       if (params$kind>0) {
@@ -175,11 +180,28 @@ Structure is by vertical menu bar^[Not available for small screen size, e\.g\. m
 
 + `r tabTable`: Sometimes values are not rounded
 
++ `r tabProp`: Slow rendering due to no data aggregation
+
 ### What's new
 
 + `r Sys.Date()`
 
   *ongoing...*
+
++ 2019-09-15
+
+  Branching supports one-level recursion in format \<project\>/\<version\>, with optional \<version\> and separated by "/" symbol.
+
+
++ 2019-08-30
+
+  Added `r tabProp` tab.
+
++ 2019-08-28
+
+  Added abbreviated "Representative/Distinctive" column into `r tabTable` table.
+
+  `r tabMap`: Added input for selection Marxan output between **frequency** among set of runs and **best run**.
 
 + 2019-08-23
 

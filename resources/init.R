@@ -3,10 +3,11 @@ print(c(seed=seed))
 set.seed(seed)
 height <- "612px"
 editName <- c("*** INTERACTIVE ***","Preselected (dummy)")[1]
-devel <- length(grep("^[A-Z]\\:/platt",Sys.getenv("USER")))>0 & !interactive() #.argv0()=="flipper-pampan.R"
+devel <- length(grep("^[A-Z]\\:/platt",Sys.getenv("USER")))>0 &
+         dirname(normalizePath(file.path(getwd())))!="C:/tmp"
 tryToRefuseLeafletRendering <- FALSE && devel
 p <- proc.time()
-options(ursaTimeStart=p,ursaTimeDelta=p)
+options(ursaTimeStart=p,ursaTimeDelta=p,stringsAsFactors=FALSE)
 rm(p)
 css <- character()
 if (file.exists("www/custom.css")) {
@@ -112,6 +113,12 @@ if (devel)
 }
 dpath <- "."
 'polarmap' <- function(epsg,centered=TRUE,data=NULL) {
+   if (is.character(centered)) {
+      aoi <- centered
+      centered <- TRUE
+   }
+   else
+      aoi <- "arctic"
    if (is.character(epsg))
       epsg <- as.integer(epsg)
    extent <- 11000000 + 9036842.762 + 667
@@ -139,8 +146,12 @@ dpath <- "."
          m <- setView(m,-100,84,4)
       else if (epsg==3572)
          m <- setView(m,-150,86,4)
-      else if (epsg==3571)
-         m <- setView(m,180,87,4)
+      else if (epsg==3571) {
+         if (aoi=="bering")
+            m <- setView(m,160,60,5)
+         else
+            m <- setView(m,180,87,4)
+      }
       else if (TRUE)
          m <- setView(m,0,90,4)
         # m <- setView(m,12.57,55.687,12) ## Kopenhagen

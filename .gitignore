@@ -24,4 +24,5 @@ SciTE.session
 inventory.rds.*
 *.link
 *.html
+*.knitted
 README.Rmd
