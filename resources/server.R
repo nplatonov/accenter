@@ -8,9 +8,10 @@ server <- function(input,output,session) {
       if (devel)
          .elapsedTime("branch (reactive) -- start")
       branch <- parseQueryString(session$clientData$url_search)[['branch']]
-     # branch <- "pampan"
+      if (F & is.null(branch))
+         branch <- "pampan"
       bpath <- dpath
-      complete <- dir.exists(file.path(bpath,"results"))
+      complete <- dir.exists(file.path(bpath,"results")) & is.null(branch)
       if (!complete) {
          bpath <- file.path(dpath,"branch")
          if (is.character(branch)) {
@@ -45,7 +46,7 @@ server <- function(input,output,session) {
             }
          }
       }
-      hpath <- c(".","..","../..","dsds")#,reserve,file.path(reserve,".."))
+      hpath <- c(".","..","../..","results/sc01")#,reserve,file.path(reserve,".."))
       hpath <- c(file.path(bpath,hpath),dpath)
       hpath2 <- normalizePath(hpath,winslash="/",mustWork=FALSE)
       hpath <- hpath[grep(tail(hpath2,1),hpath2)]
@@ -424,7 +425,7 @@ server <- function(input,output,session) {
       res5$name <- cfname$CF_name[match(res5$id,as.integer(cfname$CF_code))]
       res5$prop <- with(res5,selected/reached) ## 8
       if (TRUE)
-         res5 <- res5[with(res5,order(prop,represent,decreasing=TRUE)),]
+         res5 <- res5[with(res5,order(represent,prop,decreasing=TRUE)),]
       exchange$res <- res
       if (devel)
          .elapsedTime("data (reactive) -- finish")

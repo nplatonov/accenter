@@ -1,11 +1,7 @@
 ## ?rsconnect::deployApp
+deploy <- F
 opW <- options(warn=10)
-require(rsconnect)
-options(rsconnect.http=c("rcurl","curl","internal")[1]
-       ,rsconnect.check.certificate=FALSE
-       ,rsconnect.http.verbose=FALSE)
 account <- c("devel","release","emulate")[2]
-deploy <- TRUE
 arglist <- commandArgs(TRUE)
 if (length(arglist)) {
    if (length(ind <- grep("dev",arglist)))
@@ -17,19 +13,30 @@ if (length(arglist)) {
    if (length(ind <- grep("^local",arglist)))
       deploy <- FALSE
 }
-opShiny <- getOption(switch(account[1],release="rsconnectWWF","rsconnect"))
-if (is.null(opShiny)) {
-   message("Expected record of 'rsconnect' option (example):")
-   opShiny <- list(name="yourname"
-                  ,token=paste(sample(c(0:9,LETTERS[seq(6)]),32,rep=TRUE),collapse="")
-                  ,secret=paste(sample(c(0:9,LETTERS,letters,"+"),40,rep=TRUE),collapse="")
-                  )
-   str(opShiny)
-   opShiny <- NULL
-   stop("Authentification data are not receieved")
+if (deploy) {
+   require(rsconnect)
+   options(rsconnect.http=c("rcurl","curl","internal")[2]
+          ,rsconnect.check.certificate=FALSE
+          ,rsconnect.http.verbose=FALSE)
+   opShiny <- getOption(switch(account[1],release="rsconnectWWF","rsconnect"))
+   if (is.null(opShiny)) {
+      message("Expected record of 'rsconnect' option (example):")
+      opShiny <- list(name="yourname"
+                     ,token=paste(sample(c(0:9,LETTERS[seq(6)]),32,rep=TRUE),collapse="")
+                     ,secret=paste(sample(c(0:9,LETTERS,letters,"+"),40,rep=TRUE),collapse="")
+                     )
+      str(opShiny)
+      opShiny <- NULL
+      stop("Authentification data are not receieved")
+   }
+   #str(opShiny)
+   res <- try(with(opShiny,setAccountInfo(name=name,token=token,secret=secret)))
+   if (inherits(res,"try-error")) {
+      message(attr(res,"condition")$message)
+      stop()
+   }
 }
-with(opShiny,setAccountInfo(name=name,token=token,secret=secret))
-appname <- switch(account[1],release="platini","accenter")
+appname <- switch(account[1],release="platini",c("accenter","openday")[2])
 appfiles <- c("www","branch","app.R") ## -"predefined"
 if (account %in% c("devel"))
    appfiles <- c("common","results","scenarios",appfiles)
