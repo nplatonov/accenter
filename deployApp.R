@@ -1,5 +1,5 @@
 ## ?rsconnect::deployApp
-deploy <- F
+deploy <- T
 opW <- options(warn=10)
 account <- c("devel","release","emulate")[2]
 arglist <- commandArgs(TRUE)
@@ -14,10 +14,14 @@ if (length(arglist)) {
       deploy <- FALSE
 }
 if (deploy) {
+   if (length(grep("devel",R.Version()$status,ignore.case=TRUE)))
+      stop("R-devel is not supported on shinyapps.io (seems to)")
    require(rsconnect)
-   options(rsconnect.http=c("rcurl","curl","internal")[2]
+   options(rsconnect.dummy=NULL
+          ,rsconnect.http=c("rcurl","curl","internal")[2]
           ,rsconnect.check.certificate=FALSE
-          ,rsconnect.http.verbose=FALSE)
+          ,rsconnect.http.verbose=FALSE
+          )
    opShiny <- getOption(switch(account[1],release="rsconnectWWF","rsconnect"))
    if (is.null(opShiny)) {
       message("Expected record of 'rsconnect' option (example):")
@@ -36,7 +40,7 @@ if (deploy) {
       stop()
    }
 }
-appname <- switch(account[1],release="platini",c("accenter","openday")[2])
+appname <- switch(account[1],release="platini",c("accenter","openday")[1])
 appfiles <- c("www","branch","app.R") ## -"predefined"
 if (account %in% c("devel"))
    appfiles <- c("common","results","scenarios",appfiles)

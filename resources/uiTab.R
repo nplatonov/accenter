@@ -79,7 +79,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                   ,tabPanel(title="Map",value="map",icon=icon("globe")
                      ,fluidRow(NULL
                         ,column(8
-                           ,uiOutput("ui")
+                           ,uiOutput("ui") %>% withSpinner()
                           # ,editModUI("editor")
                         )
                         ,column(4
@@ -107,8 +107,8 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                                        ,width="160px"
                                        )
                            ,selectInput("freq","Marxan output"
-                                       ,c("frequency","best run")
-                                       ,selected="frequency"
+                                       ,c("frequency","best run","frequency >= 0.5","frequency >= 0.75") ## ≥
+                                       ,selected="frequency >= 0.5"
                                        ##~ ,epsgList
                                        ##~ ,selected=3575
                                        ,width="160px"
@@ -151,7 +151,7 @@ uiTab <- dashboardPage(skin="blue"  ## "blue", "black", "purple", "green", "red"
                      ,fluidRow(NULL
                         ,column(2)
                         ,column(8
-                           ,uiOutput("geopu")
+                           ,uiOutput("geopu") %>% withSpinner()
                           # ,DT::DTOutput("tbl")
                         )
                         ,column(2

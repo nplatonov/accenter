@@ -1,3 +1,4 @@
+# options(encoding="UTF-8")
 source("./resources/init.R")
 source("./resources/uiTab.R")
 source("./resources/server.R")

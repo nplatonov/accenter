@@ -93,7 +93,8 @@ suppressMessages({
   # require(ursa)
    require(DT)
    require(plotly)
-   requireNamespace("lwgeom")
+   require(shinycssloaders)
+  # requireNamespace("lwgeom") ## 20200428 deprecated 20200412 Shinyapps.io: Error building lwgeom (0.2-3)
 })
 if (devel)
    .elapsedTime("package load -- finish")
@@ -112,6 +113,7 @@ if (devel)
    sf::st_zm(ret)
 }
 dpath <- "."
+options(spinner.color="#ECF0F5") 
 'polarmap' <- function(epsg,centered=TRUE,data=NULL) {
    if (is.character(centered)) {
       aoi <- centered

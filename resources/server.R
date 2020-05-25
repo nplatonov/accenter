@@ -1,13 +1,16 @@
 server <- function(input,output,session) {
-   if (T & devel)
+   if (F & devel)
       session$onSessionEnded(stopApp)
    exchange <- reactiveValues(edits=NULL,puvspr=NULL,spec=NULL#,prob=NULL
                              ,freq=NULL,freq3=NULL,overlay=NULL,res=NULL)
   # scenario <- observeEvent(input$spath,{
    branch <- reactive({
+      prm <- parseQueryString(session$clientData$url_search)
+      if (devel)
+         prm <- list(branch="pampan/4.2.1",region="30")
       if (devel)
          .elapsedTime("branch (reactive) -- start")
-      branch <- parseQueryString(session$clientData$url_search)[['branch']]
+      branch <- prm[['branch']]
       if (F & is.null(branch))
          branch <- "pampan"
       bpath <- dpath
@@ -56,6 +59,11 @@ server <- function(input,output,session) {
       rpath <- rpath[dir.exists(rpath)][1]
       rname0 <- dir(path=rpath,pattern="\\.(geojson|sqlite|shp)(\\.(zip))*$",full.names=TRUE)
       rname1 <- c(editName,gsub("\\.shp(\\.zip)*","",basename(rname0)))#[1]
+      regname <- prm[['region']]
+      if (!is.null(regname)) {
+         if (length(rname2 <- grep(regname,basename(rname0),value=TRUE))==1)
+            rname1 <- gsub("\\.shp(\\.zip)*","",rname2)
+      }
       Fpuvspr <- lapply(mpath,function(mpath2)
                           dir(path=mpath2,pattern="^puvspr\\.dat(\\.(gz|zip))*$"
                           ,recursive=TRUE,full.names=TRUE))
@@ -151,16 +159,24 @@ server <- function(input,output,session) {
          epsgList <- 3571
          epsg <- 3571
       }
+      cat("---------------\n")
+      print(rname1)
+      cat("---------------\n")
       updateSelectInput(session,"spath",choices=sname0,selected=sample(sname0,1))
       updateSelectInput(session,"rpath"
-                       ,choices=list('Manual'=rname1[1],'Preselected'=rname1[-1])
+                       ,choices=if ((length(rname1)==1)&&(rname1!=editName))
+                             rname1
+                          else
+                             list('Manual'=rname1[1],'Preselected'=rname1[-1])
                        ,selected=ifelse(length(rname1)==1,rname1,sample(rname1,1))
                        )
       updateSelectInput(session,"epsg",choices=epsgList,selected=epsg)
       if (devel)
          .elapsedTime("branch (reactive) -- finish")
-      list(gpath=gpath,sname0=sname0,spath0=spath0,cfname=cfname,pu=pu
-          ,mpath=mpath,rname0=rname0,region=regionName,aoi=aoi,redis=redis)#,epsg=epsg)
+      ret <- list(gpath=gpath,sname0=sname0,spath0=spath0,cfname=cfname,pu=pu
+                 ,mpath=mpath,rname0=rname0,region=regionName,aoi=aoi,redis=redis)#,epsg=epsg)
+     # str(ret)
+      ret
    })
    scenario <- observe({ ## 'scenario' without assignment 
       if (devel)
@@ -192,12 +208,31 @@ server <- function(input,output,session) {
       pu <- branch()$pu
       freq$ID <- pu$ID
       isFreq <- length(grep("(freq|sum)",input$freq))>0
-      if (isFreq)
-         freq$value <- freq$sum/max(freq$sum) ## subject to be overestimated
+      isThreshold <- (isFreq)&&(length(grep("\\d$",input$freq))>0)
+      if (isFreq) {
+         if (isThreshold) {
+           # th <- gsub(".*(\\d+(\\.\\d+)*)$","\\1",input$freq)
+            th <- as.numeric(gsub("^.*\\D(\\d(\\.\\d+$))","\\1",input$freq))
+            v <- freq$sum/max(freq$sum)
+            v[v<th] <- 0
+            v[v>0] <- 1
+            cat("-0519-1---------\n")
+            print(table(v))
+            freq$value <- v
+            freq$sum <- v
+            cat("-0519-1---------\n")
+         }
+         else
+            freq$value <- freq$sum/max(freq$sum) ## subject to be overestimated
+      }
       else {
          freq$value <- freq$best
          freq$sum <- freq$best
       }
+      cat("-0519-2---------\n")
+      print(summary(freq$value))
+      print(summary(freq$sum))
+      cat("-0519-2---------\n")
      # prob <- freq
      # sf::st_geometry(prob) <- NULL
       Fspec <- dir(path=spath,pattern="spec\\.dat(\\.gz)*$"
@@ -223,8 +258,19 @@ server <- function(input,output,session) {
       puvspr <- read.csv(Fpuvspr)
      # freq <- aggregate(freq,by=list(freq$sum),mean)["sum"]
       Fagr <- file.path(spath,"freq-aggregate.shp.zip")
-      if ((isFreq)&&(file.exists(Fagr))) {
-         freq3 <- shapefile(Fagr)
+      if ((isThreshold)&&(file.exists(Fagr))) {
+         freq3 <- sf::st_transform(shapefile(Fagr),4326)
+         cat("0519-3-----------\n")
+         print(th)
+         print(summary(freq3$sum))
+         v <- freq3$sum/max(freq3$sum)
+         v[v<th] <- 0
+         v[v>0] <- 1
+         freq3$sum <- v
+         print(summary(freq3$sum))
+         cat("0519-3-----------\n")
+      }
+      else if ((isFreq)&&(file.exists(Fagr))) {
          freq3 <- sf::st_transform(shapefile(Fagr),4326)
       }
       else if (TRUE) {
@@ -327,18 +373,20 @@ server <- function(input,output,session) {
          .elapsedTime("   intersection -- start")
       ##~ showNotification(id="reactive",closeButton=FALSE,duration=120,"Find intersection..."
                       ##~ ,type="warning")
-      if (!all(sf::st_is_valid(s))) {
-         showNotification(id="valid",closeButton=FALSE,duration=120,"Make geometry valid..."
-                         ,type="warning")
-         s <- lwgeom::st_make_valid(s)
+      if (!all(sf::st_is_valid(s))) { ## &&("lwgeom" %in% loadedNamespaces())
+        showNotification(id="valid",closeButton=FALSE,duration=120,"Make geometry valid..."
+                        ,type="warning")
+         s <- sf::st_make_valid(s)
          removeNotification(id="valid")
       }
       s <- sf::st_transform(sf::st_geometry(s),sf::st_crs(freq))
      # sf::st_agr(s) <- "constant"
       sf::st_agr(freq) <- "constant"
      # res <- sf::st_intersection(freq,s)
-      print(c(careful=length(sf::st_geometry(s))))
-      careful <- length(sf::st_geometry(s))!=1
+      print(c(spatial_count=length(sf::st_geometry(s))))
+      gridded <- length(grep("pampan/4.2.1",branch()$mpath))>0
+      careful <- gridded | length(sf::st_geometry(s))!=1
+      print(c(careful=careful))
       showModal(modalDialog(title = "Find intersection...","Not long to finish"
                            ,size="s",easyClose = TRUE,footer = NULL))
       if (devel) {
@@ -347,8 +395,11 @@ server <- function(input,output,session) {
          sf::st_write(freq,"./shiny.log/res-freq.shp",quiet=TRUE)
          sf::st_write(s,"./shiny.log/res-s.shp",quiet=TRUE)
       }
-      if (careful)
+      if (careful) {
          res <- sf::st_intersection(freq,s)[c("ID","sum")]
+         if (gridded)
+            res <- res[sf::st_area(res)>units::as_units(99,"m^2"),]
+      }
       else {
          ind <- sf::st_disjoint(s,freq,sparse=F)
          res <- freq[which(!ind),]
@@ -426,6 +477,8 @@ server <- function(input,output,session) {
       res5$prop <- with(res5,selected/reached) ## 8
       if (TRUE)
          res5 <- res5[with(res5,order(represent,prop,decreasing=TRUE)),]
+      if (TRUE)
+         res5 <- res5[res5$target>0,]
       exchange$res <- res
       if (devel)
          .elapsedTime("data (reactive) -- finish")
@@ -433,10 +486,10 @@ server <- function(input,output,session) {
    })
    output$ui <- renderUI({
       if (T & input$rpath==editName) {
-         ret <- editModUI("editor")#,height=height)
+         ret <- editModUI("editor") %>% withSpinner() #,height=height)
       }
       else {
-         ret <- leafletOutput("viewerLeaflet")#,height=height)
+         ret <- leafletOutput("viewerLeaflet") %>% withSpinner() #,height=height)
       }
       ret
    })
@@ -688,7 +741,7 @@ server <- function(input,output,session) {
       if (FALSE)
          dt <- subset(dt,prop>0)
       slen <- length(which(dt$prop>0))
-      lmenu <- sort(c(10,15,20,25,50,100,200,slen,nrow(dt)))
+      lmenu <- sort(c(5,10,15,20,25,50,100,200,slen,nrow(dt)))
       lmenu <- lmenu[lmenu<=nrow(dt)]
       cname <- c('1, id'="CF"
                 ,'2, name'="Name"
@@ -778,7 +831,7 @@ server <- function(input,output,session) {
       paste0("<b>Map projection code</b><br/>",input$epsg)
    })
    output$geopu <- renderUI({
-      leafletOutput("geopuLeaflet")
+      leafletOutput("geopuLeaflet") %>% withSpinner()
    })
    output$geopuLeaflet <- renderLeaflet({
       puvspr <- exchange$puvspr
