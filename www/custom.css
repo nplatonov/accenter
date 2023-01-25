@@ -1,27 +1,24 @@
+@font-face {
+   font-family: 'wwf';
+   src: url(https://nplatonov.github.io/chicory/wwf.ttf) format('truetype');
+}
 body {
    width: 100% !important;
    max-width: 100% !important;
+   line-height: 1.6;
 }
 /*.skin-blue .main-sidebar{width: 600px;}*/
+.skin-blue body {
+   margin-right: 0px;
+}
 .skin-blue zzzbody {
    min-height: unset !important; /* displayed 611px */
-}
-.skin-blue .left-side,
-.skin-blue .main-sidebar {
-   padding-top: 15px;
-}
-.skin-blue section.sidebar .shiny-input-container {
-   padding: 0 5px 0 5px !important;
 }
 .skin-blue .form-group {
    margin-bottom: 5px;
 }
 .skin-blue .selectize-control {
    margin-bottom: 5px;
-}
-.skin-blue .main-sidebar {
-   width: 40px;
-   z-index: 1010;
 }
 .skin-blue .left-side,
 .skin-blue .main-sidebar,
@@ -35,12 +32,23 @@ body {
 .skin-blue .sidebar-menu > li:hover > a {
    background-color: #ecf0f5; /*#2e7176 #ecf0f5*/
 }
+.skin-blue .sidebar-menu > li >  a {
+   color: #999;
+}
+.skin-blue .sidebar-menu > li.active > a,
+.skin-blue .sidebar-menu > li:hover > a {
+   color: #222;
+}
 .skin-blue .nav-tabs-custom > .nav-tabs > li.active {
     border-top-color: lavender; /* lavender laightgrey */
 }            
+.skin-blue .main-header .navbar .sidebar-toggle,
+.skin-blue .main-header .logo {
+   color: #666;
+}
 .skin-blue .main-header .navbar .sidebar-toggle:hover,
 .skin-blue .main-header .logo:hover {
-   color: #ddd;
+   color: #222;
 }
 .skin-blue .sidebar-menu > li {
     margin: 0 0 0 -6px;
@@ -56,36 +64,10 @@ body {
    width:600px;
 }
 .skin-blue .nav > li > a {
-   padding: 8px 7.5vw 8px 0.5vw; /* 4px 8vw 4px 2px */
+   padding: 8px 24px 8px 8px; /* 8px 7.5vw 8px 0.5vw; */ /* 4px 8vw 4px 2px */
 }
-.skin-blue .sidebar-menu > li.active > a,
-.skin-blue .sidebar-menu > li:hover > a {
-   color: lightslategrey;
-}
-/* 
-.skin-blue .main-sidebar:hover > .sidebar > .sidebar-menu > li > a > span {
-   color: slategrey;
-}
-*/ 
-.skin-blue .sidebar-menu {
-   margin-top: 7em;
-   border: 1px solid trasnparent;
-   border-radius: 5px;
-}
-.skin-blue .sidebar-menu:hover {
-   background-color: #ecf0f5d0;
-   width: 140px;
-   border: grey;
-}
-.skin-blue .sidebar-menu > li > a > span {
-   color: transparent;
-}
-.skin-blue .sidebar-menu:hover > li > a > span {
-   color: slategrey;
-}
-.skin-blue > .sidebar-menu:hover > li.active:hover > a > span,
-.skin-blue > .sidebar-menu:hover > li:hover > a > span {
-   color: lightslategrey;
+.skin-blue .nav > li.active > a {
+  /* padding: 8px 6px 10px 4px;*/
 }
 .skin-blue .nav-tabs-custom > .nav-tabs > li > a {
    color: slategrey;
@@ -118,39 +100,30 @@ body {
 .skin-blue .dt-buttons {
    margin: -0.4em 1.8em !important;
 }
-.sidebar-menu > li > a > .fa,
-.sidebar-menu > li > a > .glyphicon,
-.sidebar-menu > li > a > .ion {
-    width: 24px;
-}
-.skin-blue .sidebar-menu > li > a > span {
-   display: inline-block;
-   position: absolute;
-  /* width: 140px; */
-  /* height: 30px; */
-   margin-top: -5px;
-   padding-top: 5px;
-   padding-bottom: 3px;
-   padding-left: 0px;
-   padding-right: 5px;
-}
-.skin-blue .sidebar-menu > li > a:hover, .skin-blue .sidebar-menu > li.active > a {
-   background-color: transparent;
-}
 .skin-blue .content-wrapper, .right-side {
    min-height: 100vh !important;
 }
 .skin-blue .main-header {
   /* max-height: 100px;*/
-   display: none;
+  /* display: none;*/
+}
+#question {
+   width: 810px;
+   max-width: 100%;
 }
 @media screen {
-.skin-blue #viewerLeaflet,
-.skin-blue #viewerMapview,
-.skin-blue #editor-map,
-.skin-blue #geopuLeaflet {
-   height: 78vh !important;
-}}
+   .skin-blue #viewerLeaflet,
+   .skin-blue #viewerMapview,
+   .skin-blue #selectLeaflet,
+   .skin-blue #editor-map,
+   .skin-blue #geopuLeaflet {
+      height: calc(100vh - 124px) !important; /* 78 vh */
+   }
+   .skin-blue #plotlyHist,
+   .skin-blue #plotlyBox {
+      height: calc(50vh - 65px) !important;
+   }
+}
 /* 
 @media only screen and (max-height: 600px) {
 .skin-blue #viewerLeaflet, .skin-blue #viewerMapview, .skin-blue #editor-map {
@@ -158,5 +131,123 @@ body {
 }}
 */ 
 .skin-blue .content-wrapper {
-   min-height: 777px !important;
+  /* min-height: unset !important;*/
+   min-height: calc(100vh - 134px) !important;
+}
+.skin-blue .tab-content {
+  /* min-height: unset !important;*/
+   min-height: calc(100vh - 104px) !important;
+}
+header .nav::after {
+  /* content: "like more info!";*/
+}
+.sidebar ul li a[href*="wwf"] {
+   font-family: wwf;
+   font-size: 260%;
+}
+.sidebar ul li a[href*="wwf"] span {
+   padding-left: 14px;
+}
+.main-header .logo {
+   font-family: wwf;
+   font-size: 160%;
+}
+.leaflet-container { background: #fff; }
+.plotly .modebar {
+   opacity: 0.01;
+}
+.plotly:hover .modebar {
+   opacity: 0.3;
+}
+.plotly .modebar:hover {
+   opacity: 1;
+}
+.dataTables_length {
+   padding-top: 9px;
+}
+table.dataTable tbody th, table.dataTable tbody td {
+  /* padding: 3px 4px;*/
+   vertical-align: middle;
+   line-height: 1.3;
+}
+table.dataTable thead th, table.dataTable thead td {
+  /* padding: 3px 18px; */
+   line-height: 1.3;
+}
+.csl-entry {
+   margin-top: 0.6em;
+   margin-bottom: 0.6em;
+}
+#tabReview, #tabDetails, #tabMap {
+   display: inline;
+}
+table tbody td {
+   vertical-align: top;
+} 
+@media only screen and (max-width: 1064px) {
+   .skin-blue .nav > li > a {
+      padding: 4px 4px 11px 5px; /* 8px 7.5vw 8px 0.5vw; */ /* 4px 8vw 4px 2px */
+   }
+   .skin-blue .nav > li.active > a {
+      padding: 8px 6px 10px 4px;
+   }
+   .nav-tabs li a:only-of-type {
+     /* visibility: hidden;*/
+      font-size: 0mm;
+      padding-right: 8px;
+      line-height: 1.43;
+      padding-top: 11px;
+   }
+   .nav-tabs li a .fa {
+      font-size: 14px;
+   }
+   .nav-tabs li.active a:only-of-type {
+      font-size: 14px;
+   }
+   .skin-blue .tab-content {
+     /* min-height: unset !important;*/
+      min-height: calc(100vh - 105px) !important;
+   }
+   .skin-blue #viewerLeaflet,
+   .skin-blue #viewerMapview,
+   .skin-blue #selectLeaflet,
+   .skin-blue #editor-map,
+   .skin-blue #geopuLeaflet {
+      height: calc(100vh - 124px) !important; /* 78 vh */
+   }
+   .skin-blue #plotlyHist,
+   .skin-blue #plotlyBox {
+      height: calc(50vh - 63px) !important;
+   }
+}
+@media only screen and (max-width: 767px) {
+   .main-header .logo {
+      display: inline-table;
+      position: static;
+      line-height: 1.3;
+      padding-left: 8px;
+      padding-right: 8px;
+      width: 80%;
+      float: none;
+   }
+   .main-header {
+      max-height: unset;
+   }
+   .main-header .navbar {
+      display: ruby;
+   }
+   .navbar {
+      position: initial;
+   }
+   .skin-blue #viewerLeaflet,
+   .skin-blue #viewerMapview,
+   .skin-blue #selectLeaflet,
+   .skin-blue #editor-map,
+   .skin-blue #geopuLeaflet {
+      height: 70vh !important; /* max 84vh */
+   }
+   .skin-blue #plotlyHist,
+   .skin-blue #plotlyBox {
+      height: 35vh !important;
+   }
 }

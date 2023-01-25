@@ -1,13 +1,20 @@
+#' ---
+#' spin: false
+#' ---
+#'
 server <- function(input,output,session) {
-   if (F & devel)
+   if (T & devel)
       session$onSessionEnded(stopApp)
    exchange <- reactiveValues(edits=NULL,puvspr=NULL,spec=NULL#,prob=NULL
                              ,freq=NULL,freq3=NULL,overlay=NULL,res=NULL)
   # scenario <- observeEvent(input$spath,{
    branch <- reactive({
       prm <- parseQueryString(session$clientData$url_search)
-      if (devel)
-         prm <- list(branch="pampan/4.2.1",region="30")
+      if (devel) {
+        # prm <- list(branch="pampan/4.2")
+         prm <- list(branch="pampan/4.2.1")
+        # prm <- list(branch="pampan/4.2.1",region="60")
+      }
       if (devel)
          .elapsedTime("branch (reactive) -- start")
       branch <- prm[['branch']]
@@ -149,16 +156,19 @@ server <- function(input,output,session) {
       if (T)
          sname0 <- paste0(scname[["#"]][scind],": ",scname[["Name"]][scind])
       sname <- sname0[1]
-      regionName <- c("Pan-Arctic area")
-      aoi <- "arctic"
-      epsgList <- 3571:3576
-      epsg <- 3575
+      regionName <- "Study area"
+      aoi <- "Arctic"
+      epsgList <- paste0("EPSG:",3571:3576)
+      epsg <- "EPSG:3575"
       if (length(grep("(fareast|bering)",bpath,ignore.case=TRUE))) {
          regionName <- "Russian Far East area"
          aoi <- "bering"
-         epsgList <- 3571
-         epsg <- 3571
+         epsgList <- "EPSG:3571"
+         epsg <- "EPSG:3571"
       }
+      projectName <- regionName
+      if (length(grep("(pampan|arcnet)",bpath,ignore.case=TRUE)))
+         projectName <- "ArcNet"
       cat("---------------\n")
       print(rname1)
       cat("---------------\n")
@@ -167,18 +177,18 @@ server <- function(input,output,session) {
                        ,choices=if ((length(rname1)==1)&&(rname1!=editName))
                              rname1
                           else
-                             list('Manual'=rname1[1],'Preselected'=rname1[-1])
+                             list('Custom AOI'=rname1[1],'Preselected'=rname1[-1])
                        ,selected=ifelse(length(rname1)==1,rname1,sample(rname1,1))
                        )
       updateSelectInput(session,"epsg",choices=epsgList,selected=epsg)
       if (devel)
          .elapsedTime("branch (reactive) -- finish")
       ret <- list(gpath=gpath,sname0=sname0,spath0=spath0,cfname=cfname,pu=pu
-                 ,mpath=mpath,rname0=rname0,region=regionName,aoi=aoi,redis=redis)#,epsg=epsg)
-     # str(ret)
+                 ,mpath=mpath,rname0=rname0,region=regionName,project=projectName
+                 ,aoi=aoi,redis=redis)#,epsg=epsg)
       ret
    })
-   scenario <- observe({ ## 'scenario' without assignment 
+   scenario_noAssign <- observe({ ## 'scenario' without assignment 
       if (devel)
          .elapsedTime("scenario (observe) -- start")
       ##~ input$freq
@@ -187,13 +197,14 @@ server <- function(input,output,session) {
       showModal(modalDialog(title=paste(action,"in progress")
                            ,"Please wait",size="s",easyClose = TRUE,footer = NULL))
      # .elapsedTime("observe -- start")
-      epsg <- if (input$epsg==initName) NA else as.integer(input$epsg)
+      epsg <- if (input$epsg==initName) NA else input$epsg
       gpath <- branch()$gpath
       spath0 <- branch()$spath0
       sname0 <- branch()$sname0
       ind <- match(input$spath,sname0)
-      if (is.na(ind))
+      if (is.na(ind)) {
          ind <- sample(seq_along(sname0),1)
+      }
       spath <- file.path(gpath,spath0[ind])
       if (FALSE) {
          cat("------------\n")
@@ -207,7 +218,7 @@ server <- function(input,output,session) {
       freq <- shapefile(file.path(spath,"freq.shp.zip"))
       pu <- branch()$pu
       freq$ID <- pu$ID
-      isFreq <- length(grep("(freq|sum)",input$freq))>0
+      isFreq <- length(grep("(freq|sum)",input$freq,ignore.case=TRUE))>0
       isThreshold <- (isFreq)&&(length(grep("\\d$",input$freq))>0)
       if (isFreq) {
          if (isThreshold) {
@@ -286,8 +297,8 @@ server <- function(input,output,session) {
       if (input$rpath==editName) {
          if (devel)
             .elapsedTime("   mapedit leaflet -- start")
-         m <- polarmap(epsg,centered=branch()$aoi)
-         pal <- colorNumeric(palette="viridis",domain=freq3$sum)
+         m <- polarmap(as.integer(gsub("\\D","",epsg)),centered=branch()$aoi)
+         pal <- colorNumeric(palette="plasma",domain=freq3$sum)
          m <- addPolygons(m,data=freq3["sum"]
                          ,color=~pal(sum)
                          ,weight=0
@@ -295,14 +306,27 @@ server <- function(input,output,session) {
                          ,label=~as.character(sum)
                          ,stroke=TRUE
                         # ,weight=0.5
-                         ,fillOpacity=0.5
+                         ,fillOpacity=0.3
                         # ,highlightOptions=highlightOptions(fillOpacity=0)
                          )
+         m <- addLegend(m
+                       ,position="topleft"
+                       ,pal=pal
+                      # ,values=seq(nrow(da[[i]]))
+                       ,values=freq3[["sum"]]
+                      # ,colors=as.character(attr(da2,"colortable"))
+                      # ,labels=as.numeric(names(attr(da2,"colortable")))
+                       ,opacity=0.5,title=input$freq
+                       ,group="freq"
+                       )
          if (devel)
             .elapsedTime("   mapedit leaflet -- finish")
          if (input$rpath==editName) {
             edits <- callModule(editMod,"editor",leafmap=m
-                                       ,editor=c("leaflet.extras","leafpm")[2])
+                               ,editor=c("leaflet.extras","leafpm")[2]
+                               ,editorOptions=list(
+                                    toolbarOptions=leafpm::pmToolbarOptions(position="topright"))
+                               )
             exchange$edits <- edits
          }
       }
@@ -484,21 +508,32 @@ server <- function(input,output,session) {
          .elapsedTime("data (reactive) -- finish")
       list(res=res,freq=freq,freq3=exchange$freq3,res5=res5)
    })
-   output$ui <- renderUI({
-      if (T & input$rpath==editName) {
+   output$uiMap <- renderUI({
+      req(input$epsg!=initName)
+     # req(!inherits(try(input$rpath),"try-error"))
+      print("uiMap -- BEGIN")
+      if (editName %in% input$rpath) {
          ret <- editModUI("editor") %>% withSpinner() #,height=height)
       }
       else {
          ret <- leafletOutput("viewerLeaflet") %>% withSpinner() #,height=height)
       }
+      print("uiMap -- END")
       ret
    })
    output$viewerLeaflet <- renderLeaflet({
-      epsg <- as.integer(input$epsg)
+      if (devel)
+         .elapsedTime("occurrence leaflet -- init")
+      req(input$epsg!=initName)
+      epsg <- as.integer(gsub("\\D","",input$epsg))
       freq <- data()$freq
       freq3 <- data()$freq3
       predefined <- exchange$overlay
       req(nrow(freq))
+      if (F & !nrow(freq)) {
+         m <- polarmap(epsg)
+         return(m)
+      }
      # req(nrow(predefined))
       req(length(sf::st_geometry(predefined)))
       if (devel)
@@ -545,8 +580,13 @@ server <- function(input,output,session) {
          removeNotification(id="leaflet")
          return(m)
       }
+      grROI <- input$rpath
       m <- polarmap(epsg,centered=branch()$aoi)
-      pal <- colorNumeric(palette="viridis",domain=freq3$sum)
+      if (input$freq=="Frequency")
+        # pal <- colorNumeric(palette="YlOrRd",domain=freq3$sum,reverse=TRUE)
+         pal <- colorNumeric(palette="plasma",domain=freq3$sum,reverse=F)
+      else
+         pal <- colorFactor(palette="plasma",domain=freq3$sum,reverse=F)
       m <- addPolygons(m,data=freq3["sum"]
                       ,color=~pal(sum)
                       ,weight=0
@@ -554,10 +594,23 @@ server <- function(input,output,session) {
                       ,label=~as.character(sum)
                       ,stroke=TRUE
                      # ,weight=0.5
-                      ,fillOpacity=0.5
+                      ,fillOpacity=0.3
                      # ,highlightOptions=highlightOptions(fillOpacity=0)
+                      ,group=grROI
                       )
-      m <- addPolygons(m,data=predefined2,weight=1,fillOpacity=0.3)
+      m <- addPolygons(m
+                      ,data=predefined2
+                      ,color="#070"
+                      ,fillColor="#0A0"
+                      ,weight=2
+                      ,fillOpacity=0.4
+                      ,label=if (input$rpath!=editName) input$rpath else NULL
+                      ,highlightOptions=highlightOptions(weight=3
+                                         ,color="#070"
+                                         ,fillColor="#0F0"
+                                         ,opacity=1
+                                         )
+                      )
       ##~ pal <- colorNumeric(palette="viridis",domain=freq$sum)
      ##~ # m <- leaflet(freq) %>% addTiles()
       ##~ m <- leaflet() %>% addTiles() %>%
@@ -572,6 +625,25 @@ server <- function(input,output,session) {
                      ##~ # ,highlightOptions=highlightOptions(fillOpacity=0)
                       ##~ ) %>%
            ##~ addPolygons(data=predefined2,weight=1,fillOpacity=0.3)
+      m <- addLegend(m
+                    ,position="topleft"
+                    ,pal=pal
+                   # ,values=seq(nrow(da[[i]]))
+                    ,values=freq3[["sum"]]
+                   # ,colors=as.character(attr(da2,"colortable"))
+                   # ,labels=as.numeric(names(attr(da2,"colortable")))
+                    ,opacity=0.3,title=input$freq
+                    ,group=grROI
+                    )
+      m <- leafem::addHomeButton(m
+                                ,ext=matrix(ursa::spatial_bbox(predefined2),ncol=2)
+                                ,group=grROI
+                               # ,position=pos
+                                )
+      m <- leafem::addHomeButton(m
+                                ,ext=c(-45,50,135,50)
+                                ,group=branch()$aoi
+                                )
      # print("LEAFLET PREDEFINED -- finish")
       if (devel)
          .elapsedTime("occurrence leaflet -- finish")
@@ -586,6 +658,7 @@ server <- function(input,output,session) {
       on.exit(removeNotification(id="leaflet"))
       ind <- input$tbl_rows_selected
       withOverlap <- !is.null(ind)
+      grROI <- "Selection"
       if (devel)
          .elapsedTime("review leaflet -- start")
       if (T) {
@@ -640,7 +713,18 @@ server <- function(input,output,session) {
          }
          d <- sf::st_transform(d,4326)
          m <- polarmap(epsg,centered=FALSE)
-         m <- addPolygons(m,data=d,weight=0.5)
+         grCol <- substr(as.character(ursa::colorize("A"
+                             ,pal.dark=91,pal.light=91,pal.hue=2)$colortable),1,7)
+        # pal <- colorFactor(as.character(grCol),domain=factor(1))
+         m <- addPolygons(m
+                         ,data=d
+                         ,weight=0.5
+                         ,color=grCol
+                         ,opacity=0.9
+                         ,label="click for swithing to details"
+                         ,highlightOptions=highlightOptions(weight=2,opacity=1)
+                         ,group=grROI
+                         )
       }
       else {
          d <- sf::st_transform(d,4326)
@@ -651,37 +735,93 @@ server <- function(input,output,session) {
          .elapsedTime("review leaflet -- finish")
       if (!withOverlap) 
          return(m)
+      m <- addLegend(m
+                    ,position="topleft"
+                   # ,pal=pal
+                    ,labels=grROI
+                    ,colors=grCol
+                    ,opacity=0.7
+                   # ,title=grROI
+                    ,group=grROI
+                    )
+      m <- leafem::addHomeButton(m
+                                ,ext=matrix(ursa::spatial_bbox(d),ncol=2)
+                                ,group=grROI
+                               # ,position=pos
+                                )
+      grName <- paste("CF",data()$res5[ind,"id"])
       for (i in ind) {
+         j <- match(i,ind)
          dt <- data()$res5[i,]
          ind2 <- which(as.integer(puvspr$species) %in% as.integer(dt$id))
          res <- puvspr[ind2,]
+         grCol <- as.character(ursa::colorize(res$amount
+                      ,ramp=FALSE,pal.dark=63,pal.light=191)$colortable)
          ind3 <- which(pu$ID %in% res$pu)
          sf::st_geometry(res) <- sf::st_geometry(pu[ind3,])
-         pal <- colorNumeric(palette="plasma",domain=res$amount)
-         m <- addPolygons(m,data=sf::st_transform(res,4326)
+        # pal <- colorNumeric(palette="plasma",domain=res$amount)
+         if (length(unique(res$amount))>7)
+            pal <- colorNumeric(as.character(grCol),domain=range(res$amount))
+         else
+            pal <- colorFactor(as.character(grCol)
+                          # ,n=length(unique(res$amount))
+                           ,domain=unique(res$amount))
+         res <- sf::st_transform(res,4326)
+         m <- addPolygons(m,data=res
                          ,color=~pal(amount)
                          ,weight=0 # 0.5
                         # ,popup=~sum
                          ,label=~as.character(round(amount,2))
                          ,stroke=TRUE
                         # ,weight=0.5
-                         ,fillOpacity=0.5
+                         ,fillOpacity=0.7
                         # ,highlightOptions=highlightOptions(fillOpacity=0)
+                         ,group=grName[j]
                          )
+         m <- addLegend(m
+                       ,position="topleft"
+                       ,pal=pal
+                      # ,values=seq(nrow(da[[i]]))
+                       ,values=res$amount
+                      # ,colors=as.character(attr(da2,"colortable"))
+                      # ,labels=as.numeric(names(attr(da2,"colortable")))
+                       ,opacity=0.7
+                       ,title=grName[j]
+                       ,group=grName[j]
+                       )
+         m <- leafem::addHomeButton(m
+                                   ,ext=matrix(ursa::spatial_bbox(res),ncol=2)
+                                   ,group=grName[j]
+                                  # ,position=pos
+                                   )
       }
+      m <- addLayersControl(m
+                           ,overlayGroups=c(grROI,grName)
+                           ,options=layersControlOptions(collapsed=FALSE)
+                           )  
+      
       m
    })
    output$plotlyHist <- renderPlotly({
+      roi <- ifelse(grepl("^PAC\\s\\d+$",input$rpath)>0
+                   ,input$rpath,"Selection")
       d <- data()
-      da <- rbind(data.frame(freq="all",value=d$freq$sum)
-                 ,data.frame(freq="selected",value=d$res$sum))
+      da <- rbind(data.frame(freq="Study Area",value=d$freq$sum)
+                 ,data.frame(freq=roi,value=d$res$sum))
       p <- plot_ly(da,x=~value,type="histogram",histnorm="probability",split=~freq)
      # prm <- plotlyOpt()
      # prm$config[[1]] <- prm$layout[[1]] <- p
      # p <- do.call("layout",prm$layout)
+      
       p <- layout(p
                  ,legend=list(x=0.45,y=0.9)
-                 ,xaxis=list(title="Occurrence",zeroline=F,titlefont=list(size=12))
+                 ,title=list(text=paste("Comparison of planning units distibution\n"
+                                       ,"in Study Area and",roi)
+                            ,font=list(size=12))
+                 ,xaxis=list(title="Selection Frequency",zeroline=F
+                            ,titlefont=list(size=12))
+                 ,yaxis=list(title="Occurrence"
+                            ,titlefont=list(size=12))
                  )
       p <- config(p
                  ,displaylogo=FALSE
@@ -690,9 +830,11 @@ server <- function(input,output,session) {
       p
    })
    output$plotlyBox <- renderPlotly({
+      roi <- ifelse(grepl("^PAC\\s\\d+$",input$rpath)>0
+                   ,input$rpath,"Selection")
       d <- data()
-      da <- rbind(data.frame(freq="all",value=d$freq$sum)
-                 ,data.frame(freq="selected",value=d$res$sum))
+      da <- rbind(data.frame(freq="Study Area",value=d$freq$sum)
+                 ,data.frame(freq=roi,value=d$res$sum))
       p <- plot_ly(da,y=~value,type="box",split=~freq,showlegend=F)
      # prm <- plotlyOpt()
      # prm$config[[1]] <- prm$layout[[1]] <- p
@@ -700,13 +842,20 @@ server <- function(input,output,session) {
       p <- layout(p
                  ,legend=list(orientation="v")
                  ,xaxis=list(title="")
-                 ,yaxis=list(title="",zeroline=F)
+                 ,yaxis=list(title="Selection Frequency",zeroline=F)
                  )
       p <- config(p
                  ,displaylogo=FALSE
                  ,scrollZoom=TRUE)
       # p <- do.call("config",prm$config)
       p
+   })
+   output$plotlyDesc <- renderText({
+      roi <- ifelse(grepl("^PAC\\s\\d+$",input$rpath)>0
+                   ,input$rpath,"current selection")
+      val <- paste("Comparison distribution (by frequency or by choices)"
+                  ,"of selected cells in Study Area and",roi)
+      val
    })
    output$selectstat <- renderPlot({
       d <- data()
@@ -720,57 +869,97 @@ server <- function(input,output,session) {
       )
    })
    output$cells <- renderText({
-      paste0("Cells in ",branch()$region,": ",nrow(branch()$pu),". "
-            ,"Cells in selection: ",nrow(data()$res),".")
+      roi <- ifelse(grepl("^PAC\\s\\d+$",input$rpath)>0
+                   ,input$rpath,"current selection")
+      paste0("Total planning units in ",branch()$region,": ",nrow(branch()$pu),". "
+            ,"Planning units in ",roi,": ",nrow(data()$res),".")
    })
    output$species <- renderText({
-      paste0("Conservation features in project: "
-            ,length(unique(exchange$puvspr$species)),". "
-            ,"Conservation features in scenario: "
+      roi <- ifelse(grepl("^PAC\\s\\d+$",input$rpath)>0
+                   ,input$rpath,"current selection")
+      paste0("Conservation features in ",dQuote(branch()$project)," project: "
+           # ,length(unique(exchange$puvspr$species)),". " ## --20210115
+            ,length(unique(exchange$spec$id)),". " ## ++20210115
+            ,"Conservation features in the ",dQuote(input$spath)," scenario: "
             ,nrow(data()$res5),". "
-            ,"Conservation features in selection: "
+            ,"Conservation features in ",roi,": "
             ,nrow(subset(data()$res5,prop>0)),". ")
    })
-   output$tblSimple <- renderDT(
-      head(data()$res5)[,-c(2)],options = list(lengthChange = FALSE)
-   )
+   output$tblSimple <- renderDT({
+      head(data()$res5)[,-c(2)]
+   },options = list(lengthChange = FALSE))
   # proxy <- dataTableProxy('tbl')
    output$tbl <- renderDT({
      # proxy %>% DT::selectRows(NULL)
       dt <- data()$res5
       if (FALSE)
          dt <- subset(dt,prop>0)
+      if (branch()$project=="ArcNet" & grepl("^PAC\\s\\d+$",input$rpath)>0) {
+         dt$id <- paste0("<a href='"
+                        ,"https://nplatonov.github.io/chicory/" ## subject to replace
+                        ,"cf/s"
+                        ,sapply(paste0("cf",dt$id),digest::digest,"crc32")
+                        ,".html' target=_blank>"
+                        ,dt$id,"</a>")
+      }
       slen <- length(which(dt$prop>0))
-      lmenu <- sort(c(5,10,15,20,25,50,100,200,slen,nrow(dt)))
+      lmenu <- sort(c(5,7,10,15,20,25,50,100,200,slen,nrow(dt)))
       lmenu <- lmenu[lmenu<=nrow(dt)]
-      cname <- c('1, id'="CF"
-                ,'2, name'="Name"
-                ,'3, R/D'="Representative\u2009/\u2009Distinctive"
-                ,'4, represent'="Representation of selection"
-                ,'5, target'="Target"
-                ,'6, reached'=paste("Target achievement for",branch()$region)
-                ,'7, selected'="Target achievement for selection"
-                ,'8, prop'="Proportion of target achievement in selection"
-                )
+      if (F)
+         cname <- c('1, id'="CF"
+                   ,'2, name'="Name" ## имячко
+                   ,'3, R/D'="Repre\uADsen\uADta\uADtive\u2009/\u2009Dis\uADtinc\uADtive"
+                   ,'4, represent'="Repre\uADsen\uADta\uADtion in se\uADlec\uADtion"
+                   ,'5, target'="Con\uADser\uADva\uADtion Tar\uADget"
+                   ,'6, reached'=paste("Tar\uADget achie\uADve\uADment for","( ***study area ***)")
+                   ,'7, selected'="Tar\uADget achie\uADve\uADment for se\uADlec\uADtion"
+                   ,'8, prop'="Propor\uADti\uADon of tar\uADget achieve\uADment in se\uADlec\uADtion"
+                   )
+      else 
+         cname <- tabname()$colnames
+      if (F)
+         cname <- gsub("\uAD","",cname)
       colnames(dt) <- cname
-      DT::datatable(dt,rownames=FALSE
-                   ,extensions=c("ColReorder","Buttons")[-2]
-                   ,options=list(pageLength=20
+      if (devel) {
+         writeLines(rjson::toJSON(dt),"./shiny.log/table.json")
+         saveRDS(dt,"./shiny.log/table.rds")
+      }
+     # rownames(dt) <- dt$CF
+     # if (T)
+     #    dt$CF <- NULL
+      da <- DT::datatable(dt
+                   ,rownames=FALSE # is.null(dt$CF)
+                   ,escape=FALSE
+                   ,extensions=c("Scroller","FixedHeader","Buttons","Responsive")[4]
+                   ,options=list(dom='iftlp' ## scroller 'itf', 'Bfrtip', Accenter 'lfrBtip'
+                                ,pageLength=7 # nrow(dt)
                                 ,lengthMenu=lmenu
-                                ,autowidth=TRUE
+                               # ,autowidth=TRUE
                                # ,lengthChange=FALSE
                                 ,stateSave=TRUE
                                 ,searchHighlight=TRUE
-                                ,scrollX=TRUE
-                                ,colReorder=TRUE
-                                ,pagingType="first_last_numbers"
-                                ,dom='lfrBtip'
+                               # ,pagingType="first_last_numbers"
+                               # ,colReorder=T ## comment for use with responsive 
+                                ,scrollX=F
+                               # ,scrollY="calc(100vh - 250px)"
+                               # ,deferRender=F
+                               # ,scroller=F ## scroller
+                                ,responsive=T
+                                ,columnDefs=list(list(responsivePriority=1,targets=0)
+                                                ,list(responsivePriority=2,targets=3)
+                                                ,list(responsivePriority=3,targets=7)
+                                                ,list(responsivePriority=4,targets=6)
+                                                ,list(responsivePriority=5,targets=5)
+                                                ,list(responsivePriority=6,targets=4)
+                                                ,list(responsivePriority=7,targets=2)
+                                                )
+                               # ,fixedHeader=F
                                # ,buttons=c("pdf","print","copy")
                                 )
-                   ,filter=c("none","bottom","top")[1]
+                  # ,filter=c("none","bottom","top")[1]
                   # ,selection=c("multiple","single","none")[2]
-                   ,selection=list(mode="single",selected=integer(),target="row")
-                   ,escape=!FALSE
+                   ,selection=list(mode="multiple",selected=integer(),target=c("cell","row")[2])
+                  # ,caption="Datatable caption is here"
                    ) %>%
         # DT::formatString(cname[2]
         #                ) %>%
@@ -800,21 +989,32 @@ server <- function(input,output,session) {
                         ) %>%
          DT::formatStyle(cname[8],target="row"
                         ,color = styleInterval(c(0.00),c("DarkGrey","inherits"))) %>%
+         DT::formatStyle(0,cursor="pointer") %>%
          DT::formatRound(cname[c(4,5,8)],4) %>%
-         DT::formatPercentage(cname[c(6,7)],2)
+        # DT::formatPercentage(cname[c(6,7)],2)
+         DT::formatPercentage(cname[c(4,5,6,7,8)],1)
+      da
+   })
+   output$about <- renderUI({
+      br <- dirname(branch()$gpath)
+      infoTab(br)
    })
    output$question <- renderUI({
      # wd <- setwd("./resources");on.exit(setwd(wd))
-      a1 <- tempfile()  ## "res1.html" tempfile()
+      a1 <- tempfile() ## "C:/tmp/res1.html" tempfile()
       local_bib <- gsub("\\\\","/",file.path(tempdir(),"accenter.bib"))
+     # local_bib <- "C:/tmp/accenter.bib"
       if (!file.exists(local_bib))
          download.file("https://nplatonov.github.io/platt.bib",local_bib)
      # file.copy(bib,"platt.bib")
+      tbl <- try(data()$res5)
+      if (inherits(tbl,"try-error"))
+         tbl <- NULL
       a1 <- rmarkdown::render('resources/question.Rmd'
                        ,output_format=rmarkdown::html_fragment()
                       # ,output_format=rmarkdown::html_vignette(css=NULL)
                        ,output_file=a1,quiet=!TRUE
-                       ,params=list(prm=data()$res5
+                       ,params=list(prm=tbl
                                    ,kind=1L
                                    ,bib=local_bib
                                    )
@@ -828,7 +1028,7 @@ server <- function(input,output,session) {
       paste0("<b>Scenario</b><br/>",input$spath)
    })
    output$selectedEPSG <- renderText({
-      paste0("<b>Map projection code</b><br/>",input$epsg)
+      paste0("<b>Map projection </b><br/>",input$epsg)
    })
    output$geopu <- renderUI({
       leafletOutput("geopuLeaflet") %>% withSpinner()
@@ -867,7 +1067,7 @@ server <- function(input,output,session) {
       }
       if (devel)
          cat("==============\n")
-      epsg <- as.integer(input$epsg)
+      epsg <- input$epsg
      # str(input$puprm)
       showNotification(id="leafletpu",closeButton=FALSE,duration=25
                       ,"Wait: render leaflet (params)...",type="warning")
@@ -881,10 +1081,14 @@ server <- function(input,output,session) {
          freq$plot <- freq$dis
       else
          freq$plot <- freq$sum
+      freq <- freq[!is.na(freq$plot),]
       freq <- sf::st_transform(freq,4326)
-      m <- polarmap(epsg,centered=branch()$aoi)
-      pal <- colorNumeric(palette="viridis",domain=freq$plot)
-      if (T)
+      m <- polarmap(as.integer(gsub("\\D","",epsg)),centered=branch()$aoi)
+      col <- as.character(ursa::colorize(freq$plot
+                          ,pal.dark=63,pal.light=191,pal.hue=2)$colortable)
+      pal <- colorNumeric(palette=col,domain=range(freq$plot),reverse=F)
+      if (T) {
+         .elapsedTime("geopuLeaflet render -- start")
          m <- addPolygons(m,data=freq["plot"]
                          ,color=~pal(plot)
                          ,weight=0
@@ -892,12 +1096,69 @@ server <- function(input,output,session) {
                          ,label=~as.character(plot)
                          ,stroke=TRUE
                         # ,weight=0.5
-                         ,fillOpacity=0.5
+                         ,fillOpacity=0.7
                         # ,highlightOptions=highlightOptions(fillOpacity=0)
+                         ,group="prop"
                          )
+         m <- addLegend(m
+                       ,position="topleft"
+                       ,pal=pal
+                      # ,values=seq(nrow(da[[i]]))
+                       ,values=freq[["plot"]]
+                      # ,colors=as.character(attr(da2,"colortable"))
+                      # ,labels=as.numeric(names(attr(da2,"colortable")))
+                       ,opacity=0.7
+                       ,title=input$puprm
+                       ,group="prop"
+                       )
+         .elapsedTime("geopuLeaflet render -- finish")
+      }
       removeNotification(id="leafletpu")
       m
    })
+   output$external <- renderMenu({
+      if (devel | branch()$project=="ArcNet")
+         sidebarMenu(
+            menuItem(text="ArcNet"
+                     ,href="https://arcticwwf.org/work/ocean/arcnet/"
+                     ,icon=icon("globe-americas")
+                    # ,badgeColor="blue"
+                    # ,badgeName="www"
+                     )
+         )
+   })
+   tabname <- reactive({
+      isPAC <- branch()$project=="ArcNet" & input$rpath!=editName
+      dtname <- c('1, id'="CF ID"# 
+                 ,'2, name'="CF Name"
+                 ,'3, R/D'="Repre&shy;sen&shy;ta&shy;tive\u2009/\u2009Dis&shy;tinc&shy;tive"
+                 ,'4, represent'="Pro&shy;por&shy;tion in the se&shy;lec&shy;tion"
+                 ,'5, target'="Con&shy;ser&shy;va&shy;tion Tar&shy;get"
+                 ,'6, reached'="Tar&shy;get achie&shy;ve&shy;ment for the study area"
+                 ,'7, selected'="Tar&shy;get achie&shy;ve&shy;ment for se&shy;lec&shy;tion"
+                 ,'8, prop'="Pro&shy;por&shy;tion of tar&shy;get achie&shy;ve&shy;ment in se&shy;lec&shy;tion"
+                 )
+      if (isPAC) {
+          dtname[4] <- "Pro&shy;por&shy;tion in the PAC"
+          dtname[7] <- "Cont&shy;ri&shy;bu&shy;tion to ArcNet Tar&shy;get Achie&shy;ve&shy;ment"
+          dtname[8] <- "PAC's Cont&shy;ri&shy;bu&shy;tion to the Achie&shy;ved Tar&shy;get"
+      }
+      ret <- list(NULL
+                # ,Map=paste(ifelse(isPAC,input$rpath,"Select area-of-interest"),"on map")
+                 ,Map=ifelse(isPAC,paste(input$rpath,"on the map"),"Select area-of-interest on map")
+                 ,Details=paste("Conservation features in"
+                               ,ifelse(isPAC,input$rpath,"Selection"))
+                 ,Review=paste(ifelse(isPAC,input$rpath,"Selection")
+                             # ,"results overview"
+                              ,"overview"
+                              )
+                 ,colnames=unname(dtname)
+                 )
+      ret
+   })
+   output$tabReview = renderText(tabname()$Review)
+   output$tabDetails = renderText(tabname()$Details)
+   output$tabMap = renderText(tabname()$Map)
    ##~ output$dt_verbatim_dev <- renderPrint({
       ##~ input$tbl_rows_selected
      ##~ # sample(letters,3)
@@ -914,10 +1175,31 @@ server <- function(input,output,session) {
    ##~ observeEvent(input$epsg, {
       ##~ updateTabItems(session,"tabs","map")
    ##~ })
-   observeEvent(input$tbl_rows_selected, {
-      updateTabItems(session,"tabs","review")
-      updateTabsetPanel(session,"tabset1","review")
-   })
+   if (F)
+      observeEvent(input$tbl_cell_clicked, {
+         info <- input$tbl_cell_clicked ## $col, $row, $value
+         cat("_cell_clicked:\n")
+         str(info)
+         cat("_cells_selected:\n")
+         print(input$tbl_cells_selected)
+         cat("_tbl_rows_selected:\n")
+         print(input$tbl_rows_selected)
+         cat("_tbl_row_last_clicked:\n")
+         print(input$tbl_row_last_clicked)
+         cat(" ---------- selected/clicked end ----------\n")
+         return(NULL)
+         if (is.null(info$value) || info$col != 1)
+            return(NULL)
+         updateTabItems(session,"tabs","review")
+         updateTabsetPanel(session,"tabset1","review")
+      })
+   if (F)
+      observeEvent(input$tbl_rows_selected, {
+         if (length(input$tbl_rows_selected)!=1)
+            return(NULL)
+         updateTabItems(session,"tabs","review")
+         updateTabsetPanel(session,"tabset1","review")
+      })
    ##~ observeEvent(input$selectLeaflet_click, {
       ##~ cat("----------------\n")
       ##~ str(input$selectLeaflet_click)
@@ -930,7 +1212,7 @@ server <- function(input,output,session) {
       updateTabsetPanel(session,"tabset1","details")
    })
    observeEvent(input$viewerLeaflet_shape_click, {
-      updateTabsetPanel(session,"tabset1","review")
+      updateTabsetPanel(session,"tabset1",c("details","review")[1])
    })
    observeEvent(input$'editor-map_shape_click', {
      # updateTabsetPanel(session,"tabset1","review") ## false switching during digitizing

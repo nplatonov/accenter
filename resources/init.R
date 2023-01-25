@@ -2,18 +2,19 @@ seed <- sample(100:999,1) ## 239 823
 print(c(seed=seed))
 set.seed(seed)
 height <- "612px"
-editName <- c("*** INTERACTIVE ***","Preselected (dummy)")[1]
+editName <- c("Custom AOI","*** INTERACTIVE ***","Preselected (dummy)")[1]
 devel <- length(grep("^[A-Z]\\:/platt",Sys.getenv("USER")))>0 &
          dirname(normalizePath(file.path(getwd())))!="C:/tmp"
+shortTab <- FALSE
 tryToRefuseLeafletRendering <- FALSE && devel
 p <- proc.time()
 options(ursaTimeStart=p,ursaTimeDelta=p,stringsAsFactors=FALSE)
 rm(p)
-css <- character()
-if (file.exists("www/custom.css")) {
-   css <- readLines("www/custom.css")
-   css <- paste(c("<style>",paste("   ",css),"</style>"),collapse="\n")
-}
+#css <- character()
+#if (file.exists("www/custom.css")) {
+#   css <- readLines("www/custom.css")
+#   css <- paste(c("<style>",paste("   ",css),"</style>"),collapse="\n")
+#}
 initName <- "Initializing..."
 '.argv0' <- function() {
    arglist <- commandArgs(FALSE)
@@ -46,7 +47,7 @@ initName <- "Initializing..."
       print(mytext)
    return (message(mytext))
 }
-'infoTab' <- function() {
+'infoTab_deprecated' <- function() {
    opW <- options(warn=2) ## 2
    if (inherits(ret <- try(includeMarkdown("./resources/info.md")),"try-error"))
       ret <- helpText(paste("Welcome! For detail click to"
@@ -54,6 +55,37 @@ initName <- "Initializing..."
                            ,"'?'"
                            ,"icon on sidebar panel."))
    options(opW)
+   ret
+}
+'infoTab' <- function(br) {
+   if (missing(br))
+      return("not ready")
+  # opW <- options(warn=2) ## 2
+   branch <- c("resources",gsub("(/\\.)+$","",br))
+   dpath <- strsplit(branch,split="/")
+   a <- character()
+   for (i in seq_along(dpath)) {
+      d <- dpath[[i]]
+      for (j in seq_along(d)) {
+         fname <- do.call(file.path,as.list(c(d[1:j],"description.md")))
+         if (file.exists(fname))
+            a <- c(a,readLines(fname,encoding="UTF-8"))
+      }
+   }
+   if (length(a)) {
+      ftemp <- tempfile()
+      Fout <- file(ftemp,"wt",encoding="UTF-8")
+      writeLines(a,ftemp)
+      close(Fout)
+      ret <- includeMarkdown(ftemp)
+      file.remove(ftemp)
+   }
+   else
+      ret <- helpText(paste("Welcome! For detail click to"
+                          # ,as.character(icon("question"))
+                           ,"'?'"
+                           ,"icon on sidebar panel."))
+  # options(opW)
    ret
 }
 'questionTabUnused' <- function() {
@@ -94,6 +126,7 @@ suppressMessages({
    require(DT)
    require(plotly)
    require(shinycssloaders)
+  # require(leafpm)
   # requireNamespace("lwgeom") ## 20200428 deprecated 20200412 Shinyapps.io: Error building lwgeom (0.2-3)
 })
 if (devel)
@@ -114,55 +147,110 @@ if (devel)
 }
 dpath <- "."
 options(spinner.color="#ECF0F5") 
-'polarmap' <- function(epsg,centered=TRUE,data=NULL) {
+'polarmap' <- function(epsg,centered=TRUE,opacity=0.8,data=NULL) {
+   isASDI <- TRUE
    if (is.character(centered)) {
       aoi <- centered
       centered <- TRUE
    }
    else
-      aoi <- "arctic"
+      aoi <- "Arctic"
    if (is.character(epsg))
       epsg <- as.integer(epsg)
-   extent <- 11000000 + 9036842.762 + 667
-   origin <- c(-extent, extent)
-   maxResolution <- 2*extent/256
-   bounds <- list(c(-extent,extent),c(extent,-extent))
-   resolutions <- purrr::map_dbl(0:18,function(x) maxResolution/(2^x))
-   crsArctic <- leafletCRS(crsClass="L.Proj.CRS",code=paste0("EPSG:",epsg)
-                          ,proj4def=sf::st_crs(epsg)$proj4string
-                          ,resolutions=resolutions,origin=origin,bounds=bounds)
+   if (isASDI) {
+      extent <- 4889334.802955
+      scale0 <- 136421171.96428573131561279297
+      resolution <- 0.28*1e-3*scale0/(2^seq(0,18))
+      crsArctic <- leafletCRS(crsClass="L.Proj.CRS"
+                           ,code=paste0("EPSG:",epsg)
+                          # ,proj4def=ursa::spatial_crs(epsg)
+                           ,proj4def=sf::st_crs(epsg)$proj4string
+                           ,resolutions=resolution
+                           ,origin=c(-extent,extent)
+                           ,bounds=list(c(-extent,extent),c(extent,-extent))
+                           )
+      urlTemplate <- paste0("https://geoportal.arctic-sdi.org/action?"
+                           ,"&action_route=GetLayerTile"
+                           ,"&id=1"
+                           ,"&layer=arctic_cascading"
+                           ,"&style=default"
+                           ,"&Service=WMTS"
+                           ,"&Request=GetTile"
+                           ,"&Version=1.0.0"
+                           ,"&Format=image/png"
+                           ,"&tilematrixset={tileMatrix}"
+                           ,"&TileMatrix={z}"
+                           ,"&TileCol={x}"
+                           ,"&TileRow={y}"
+                           )
+
+      minZoom <- 1
+      maxZoom <- 10
+      grBasemap <- "Arcric SDI"
+      attrBasemap <- "<a href=https://arctic-sdi.org/services/topografic-basemap/>Arctic SDI Topographic Basemap</a>"
+   }
+   else {
+      extent <- 11000000 + 9036842.762 + 667
+      origin <- c(-extent, extent)
+      maxResolution <- 2*extent/256
+      bounds <- list(c(-extent,extent),c(extent,-extent))
+      resolutions <- purrr::map_dbl(0:18,function(x) maxResolution/(2^x))
+      crsArctic <- leafletCRS(crsClass="L.Proj.CRS",code=paste0("EPSG:",epsg)
+                             ,proj4def=sf::st_crs(epsg)$proj4string
+                             ,resolutions=resolutions,origin=origin,bounds=bounds)
+      minZoom <- 3
+      maxZoom <- 9
+   }
    if (F & devel)
       str(crsArctic)
    if (is.null(data))
-      m <- leaflet(options=leafletOptions(crs=crsArctic,minZoom=3,maxZoom=9))
+      m <- leaflet(options=leafletOptions(crs=crsArctic,minZoom=minZoom,maxZoom=maxZoom))
    else
-      m <- leaflet(data,options=leafletOptions(crs=crsArctic,minZoom=3,maxZoom=9))
+      m <- leaflet(data,options=leafletOptions(crs=crsArctic,minZoom=minZoom,maxZoom=maxZoom))
    if (centered) {
       if (epsg==3575)
-         m <- setView(m,-100,80,4) 
+         m <- setView(m,-100,80,minZoom+1)
       else if (epsg==3576)
-         m <- setView(m,-100,82,4)
+         m <- setView(m,-100,82,minZoom+1)
       else if (epsg==3574)
-         m <- setView(m,-40,82,4)
+         m <- setView(m,-40,82,minZoom+1)
       else if (epsg==3573)
-         m <- setView(m,-100,84,4)
+         m <- setView(m,-100,84,minZoom+1)
       else if (epsg==3572)
-         m <- setView(m,-150,86,4)
+         m <- setView(m,-150,86,minZoom+1)
       else if (epsg==3571) {
          if (aoi=="bering")
-            m <- setView(m,160,60,5)
+            m <- setView(m,160,60,minZoom+2)
          else
-            m <- setView(m,180,87,4)
+            m <- setView(m,180,87,minZoom+1)
       }
       else if (TRUE)
-         m <- setView(m,0,90,4)
+         m <- setView(m,0,90,minZoom+1)
         # m <- setView(m,12.57,55.687,12) ## Kopenhagen
    }
-   m <- addTiles(m,urlTemplate=paste0("https://{s}.tiles.arcticconnect.ca/osm_"
-                                     ,epsg,"/{z}/{x}/{y}.png")
-                ,attribution="Map: © ArcticConnect. Data: © OpenStreetMap contributors"
-                ,options=tileOptions(subdomains="abc"
-                                    ,noWrap=TRUE,continuousWorld=FALSE)) 
+   if (isASDI) {
+      m <- addTiles(m
+                             ,urlTemplate=urlTemplate
+                             ,options=tileOptions(tileMatrix=epsg
+                                                          ,opacity=0.6
+                                                          )
+                            # ,opacity=0.3 ## UNABLE
+                             ,attribution=attrBasemap
+                             ,group=grBasemap
+                             )
+   }
+   else {
+      m <- addTiles(m,urlTemplate=paste0("https://{s}.tiles.arcticconnect.ca/osm_"
+                                        ,epsg,"/{z}/{x}/{y}.png")
+                   ,attribution="Map: \uA9 ArcticConnect. Data: \uA9 OpenStreetMap contributors"
+                   ,options=tileOptions(subdomains="abc",opacity=opacity
+                                       ,noWrap=TRUE,continuousWorld=FALSE))
+   }
+   if (FALSE) {
+      cat("----------------- POLARMAP --------------------\n")
+      str(m)
+      cat("----------------- POLARMAP --------------------\n")
+   }
   # if (!is.null(data))
   #    m <- addPolygons(m,data=data,weight=0.5)
   # m <- addGraticule(m,interval=10)

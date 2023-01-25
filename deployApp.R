@@ -12,17 +12,19 @@ if (length(arglist)) {
       account <- "emulate"
    if (length(ind <- grep("^local",arglist)))
       deploy <- FALSE
+   if (length(ind <- grep("^upload",arglist)))
+      deploy <- TRUE
 }
 if (deploy) {
    if (length(grep("devel",R.Version()$status,ignore.case=TRUE)))
       stop("R-devel is not supported on shinyapps.io (seems to)")
    require(rsconnect)
    options(rsconnect.dummy=NULL
-          ,rsconnect.http=c("rcurl","curl","internal")[2]
+         # ,rsconnect.http=c("rcurl","curl","internal")[2]
           ,rsconnect.check.certificate=FALSE
           ,rsconnect.http.verbose=FALSE
           )
-   opShiny <- getOption(switch(account[1],release="rsconnectWWF","rsconnect"))
+   opShiny <- getOption(switch(account[1],release="rsconnectMartin","rsconnect"))
    if (is.null(opShiny)) {
       message("Expected record of 'rsconnect' option (example):")
       opShiny <- list(name="yourname"
@@ -40,20 +42,55 @@ if (deploy) {
       stop()
    }
 }
-appname <- switch(account[1],release="platini",c("accenter","openday")[1])
-appfiles <- c("www","branch","app.R") ## -"predefined"
-if (account %in% c("devel"))
-   appfiles <- c("common","results","scenarios",appfiles)
+appname <- switch(account[1]
+                 ,release=c("accenter","platini")[1]
+                 ,c("accenter","openday")[1])
+extrafiles <- c()
+appfiles <- c("www","app.R") ## -"predefined"
+extralist <- c("default","description.md")
+ind <- grep("default",extralist)
+if (account %in% c("devel")) {
+   if (includeDefaultBranch <- TRUE) {
+      br <- "branch"
+      bf <- file.path(br,extralist)
+      b <- try(readLines(bf[ind]))
+      if (!inherits(b,"try-error")) {
+         extrafiles <- c(extrafiles,bf)
+         br <- file.path(br,b)
+         bf <- file.path(br,extralist)
+         b <- try(readLines(bf[ind]))
+         if (!inherits(b,"try-error")) {
+            extrafiles <- c(extrafiles,bf)
+            br <- file.path(br,b)
+            bf <- file.path(br,extralist)
+            b <- try(readLines(bf[ind]))
+            if (!inherits(b,"try-error")) {
+            extrafiles <- c(extrafiles,bf)
+            br <- file.path(br,b)
+            }
+         }
+      }
+      appfiles <- c(br,appfiles)
+   }
+   if (T & !includeDefaultBranch)
+      appfiles <- c("common","results","scenarios",appfiles)
+}
+if (account %in% c("release"))
+   appfiles <- c("branch",appfiles)
 if (TRUE) {
    list1 <- dir(path=appfiles,recursive=TRUE,full.names=TRUE)
    list1 <- list1[grep("(^_.+|^output.+|\\.(webp|png|R)$)",basename(list1),invert=TRUE)]
    list1 <- list1[grep("(spf|blm|numitns)",basename(dirname(list1)),invert=TRUE)]
+  # print(unique(basename(dirname(list1))))
+   list1 <- list1[grep("~$",basename(dirname(list1)),invert=TRUE)]
+  # print(unique(basename(dirname(list1))))
    appfiles <- unique(c(list1,"resources/question.Rmd"
                        ,dir(path="resources",pattern="\\S\\.R$",full.names=TRUE)
                        ,"app.R"))
-   if (!(account %in% c("devel")))
-      appfiles <- c(appfiles,"resources/info.md")
+   if (T | !(account %in% c("devel")))
+      appfiles <- c(appfiles,"resources/description.md")
 }
+appfiles <- c(appfiles,extrafiles)
 if (!deploy) {
    dpath <- paste0("C:/tmp/",appname)
    if (dir.exists(dpath))

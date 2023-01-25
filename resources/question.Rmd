@@ -3,37 +3,75 @@ params:
    kind: 0
    prm: NULL
    bib: C:/platt/article/platt.bib
-pagetitle: Accenter -- documentation
-title: "[]{style=\"display: none;\"}"
+dummy: absent
+pagetitle: Accenter documentation
 author: "Nikita Platonov"
 link-citations: true
 bibliography: "`r params$bib`"
 csl: https://nplatonov.github.io/platt3.csl
-date: "`r paste(format(file.mtime('question.Rmd'),'Updated: %Y-%m-%d %H:%M.'))`"
-output:
+zzzcsl: C:/platt/R/style/platt3.csl
+date: "`r paste(format(file.mtime(knitr::current_input()),'Updated: %Y-%m-%d %H:%M.'))`"
+toc: true
+output1:
    bookdown::html_document2:
       mathjax: NULL
       base_format: rmarkdown::html_vignette
-      css: https://nplatonov.github.io/html_vignette.css
+      zzzcss: https://nplatonov.github.io/html_vignette.css
       self_contained: false
       number_sections: no
 ---
 
+
+```{r init, include=FALSE}
+knitr::opts_chunk$set(fig.align="center",echo=FALSE,message=FALSE,cache=TRUE
+                     ,root.dir="C:/tmp")
+require(shiny)
+if (!("shiny" %in% loadedNamespaces()))
+   'icon' <- function(name) paste("<",name,">")
+res <- params$prm
+kind <- params$kind
+tabMap <- paste0("[",as.character(icon('globe'))," Map]{.tab}")
+tabReview <- paste0("[",as.character(icon('dashboard'))," Review]{.tab}")
+tabTable <- paste0("[",as.character(icon('th-list'))," Details]{.tab}")
+tabProp <- paste0("[",as.character(icon('map'))," Prop]{.tab}")
+menuQuestion <- paste0("[",as.character(icon('question'))," Documentation]{.menu}")
+menuMain <- paste0("[",as.character(icon('bars'))," Mаin]{.menu}")
+
+tabMap <- paste0("[",as.character(icon('globe'))," Select area-of-interest on map]{.tab}")
+tabReview <- paste0("[",as.character(icon('dashboard'))," Selection <!-- results --> overview]{.tab}")
+tabTable <- paste0("[",as.character(icon('th-list'))," Conservation features in Selection]{.tab}")
+tabProp <- paste0("[",as.character(icon('map'))," Scenario properties]{.tab}")
+menuQuestion <- paste0("[",as.character(icon('question'))," Documentation]{.menu}")
+menuMain <- paste0("[",as.character(icon('chart-bar'))," Main panel]{.menu}")
+isArcNet <- (exists("branch"))&&(branch()$project=="ArcNet")
+scenarioText <- "Configuration, which is used to run Marxan"
+selectionText <- "Area of interest for spatial analysis"
+if (isArcNet) {
+   tabMap <- paste0("[",as.character(icon('globe'))," ",tabname()$Map,"]{.tab}")
+   tabReview <- paste0("[",as.character(icon('dashboard'))," ",tabname()$Review,"]{.tab}")
+   tabTable <- paste0("[",as.character(icon('th-list'))," ",tabname()$Details,"]{.tab}")
+   scenarioText <- "The ArcNet data accessed here, though Accenter, come from the final Marxan scenario that was selected by the ArcNet steering committee."
+   selectionText <- "Here, you can choose any of the 83 individual PACs as your area-of-interest (AOI) or you can draw a custom AOI using the tools provided by selecting “Custom AOI” from the dropdown menu."
+}
+```
+
 <style>
    body {
-      margin: 1em auto;
-      max-width: 790px;
+     /* margin: 1em auto;*/
+      max-width: `r ifelse(exists("input"),890,790)`px;
    }
    .references {
-      margin-top: 3em;
+     /* margin-top: 3em;*/
    }
    table td, table th {
       padding: 3px 12px;
    }
    .tab, .menu {
-      padding: 2px 10px;
+      padding: 2px 6px;
       border: 1px solid #9ae;
       border-radius: 3px;
+      display: inline-block;
+      margin: 2px auto;
    }
    .tab {
       border-bottom-style: none;
@@ -50,167 +88,179 @@ output:
    }
 </style>
 
-```{r init, include=FALSE}
-knitr::opts_chunk$set(fig.align="center",echo=FALSE,message=FALSE,cache=TRUE
-                     ,root.dir="C:/tmp")
-require(shiny)
-if (!("shiny" %in% loadedNamespaces()))
-   'icon' <- function(name) paste("<",name,">")
-res <- params$prm
-kind <- params$kind
-tabMap <- paste0("[",as.character(icon('globe'))," Map]{.tab}")
-tabReview <- paste0("[",as.character(icon('dashboard'))," Review]{.tab}")
-tabTable <- paste0("[",as.character(icon('th-list'))," Details]{.tab}")
-tabProp <- paste0("[",as.character(icon('map'))," Prop]{.tab}")
-menuQuestion <- paste0("[",as.character(icon('question')),"]{.menu}")
-menuMain <- paste0("[",as.character(icon('bars')),"]{.menu}")
-```
-
 ## Accenter
 
+<!--
+### Debug
 
-"Accenter" is Shiny application to analyse results of [Marxan](http://marxan.net/) [@marxan.net; @Marxan2009]. This instrument expands deskop GIS identification tools^[e. g. QGIS [@QGIS]] and ***accent***uates on analysis of Marxan data strata based on spatial predefined and interactive requests. Named with ***er***-suffix as a reference to *instrument* and contradiction to accentor: *analyst/end-user*.
+ArcNet detection: `r isArcNet`.
+-->
 
-Licence: MIT.
+### Overview
+
+"Accenter" is Shiny application that was developed to facilitate web-based spatial analysis and query of [Marxan](https://marxansolutions.org/) output [@MarxanSolutions; @Marxan2009]. 
+The application provides users with basic desktop GIS functionality for spatial query of Marxan output and the underlying data base using spatial pre- and user-defined requests.
+
+```{r, results='asis', eval=isArcNet}
+cmd <- ""
+cmd <- c(cmd,"### ArcNet Edition","","")
+cmd <- c(cmd,"In this configuration, Accenter provides access to [ArcNet](https://arcticwwf.org/work/ocean/arcnet/)’s final Marxan scenario that yielded the 83 priority areas for conservation (PACs).","","")
+cmd <- c(cmd,"Note that some of the terminology used below are specific to the ArcNet project.","")
+cat(cmd,sep="\n")
+```
+
+### Getting Started
+
+The main menu (left) is revealed/hidden with the [<i class="fas fa-bars"></i>]{style="font-size:125%;"} button in the title bar. Here, you can switch between the `r menuMain` and `r menuQuestion`.
+
++ `r menuMain` -- This menu connects with four tabs across the top:<br>
+`r tabMap`, `r tabTable`, `r tabReview`, `r tabProp`.
+
+   + `r tabMap` -- Under <!-- the Select area-of-interest (AOI) on the map --> this tab, an overview map of the Arctic region is shown, with an `r if (exists("input")) dQuote(input$rpath) else "Predefined or custom selection"` overlay of the study area, with a selection of drop-down menus (right) as follows:
+  
+      + **Marxan output**: Choose the parameter to be plotted in the overlay.
+         
+         + Frequency -- number of times a planning unit was chosen over the many Marxan runs.  The higher the frequency, the more “valuable” a cell was for a solution.  
+         
+         + Best run -- Areas marked “1” are cells that were selected as part of the final  Marxan scenario that yielded the ArcNet PACs.
+         
+         + Frequency &ge; 0.5 -- Areas marked “1” are cells that were chosen in at least 50% of the Marxan iterations. 
+         
+         + Frequency &ge; 0.75 -- Areas marked “1” are cells that were chosen in at least 75% of the Marxan iterations.
+      
+         [`r if (exists("input")) dQuote(input$freq)` is selected in the current configuration.]{.example}
+         
+      + **Projection**: The coordinate reference system of the overview map can be changed by selecting the desired item in EPSG registry [@PROJ] from this menu. Note the area of focus (e.g., Alaska) will appear “right-side-up” at the bottom of the map:
+         
+         + [EPSG:3571](https://epsg.io/3571) – WGS 84 / North Pole Lambert Azimuthal Equal Area (LAEA) Bering Sea
+         
+         + [EPSG:3572](https://epsg.io/3572) – WGS 84 / North Pole LAEA Alaska
+         
+         + [EPSG:3573](https://epsg.io/3573) – WGS 84 / North Pole LAEA Canada
+         
+         + [EPSG:3574](https://epsg.io/3574) – WGS 84 / North Pole LAEA Atlantic
+         
+         + [EPSG:3575](https://epsg.io/3575) – WGS 84 / North Pole LAEA Europe
+         
+         + [EPSG:3576](https://epsg.io/3576) – WGS 84 / North Pole LAEA Russia
+
+         [`r if (exists("input")) dQuote(input$epsg)` is selected in the current configuration.]{.example}
+
+      + **Scenario**: `r scenarioText`
+       
+         [Scenario `r if (exists("input")) dQuote(input$spath)` is selected in the current configuration.]{.example}
+      
+      + **Selection**: `r selectionText`
+      
+         [`r if (exists("input")) dQuote(input$rpath) else "Predefined or custom selection"` is selected in the current configuraion.]{.example}
+
+      
+   + `r tabTable` -- Once an AOI is selected on the map, clicking this tab will take you to a comprehensive list of the CFs that fall within the AOI.  While all CFs in the project are listed, those that occur in the selected area appear in bold.  The information in the columns is as follows:   
+
+      <!-- 
+      Parameter|Description
+      |:--|:----|
+      CF ID | Unique CF ID number, which is linked to the CF report giving relevant metadata.
+      CF Name | CF name and description.
+      Representative/Distinctive | Indicates whether the CF is a representative (R) or distinctive (D) feature or both (RD) (see Marxan in the Glossary). 
+      Proportion in the selection | Proportion of the whole CF extent that is captured in the selection. 
+      Conservation Target | Proportion of the CF that, as a minimum, was to be included in the final Marxan scenario.
+      Target achievement for the study area | Level of target achievement for the CF across the study area. 
+      Target achievement for selection | Level of target achievement for the CF in the selected area of interest. 
+      Proportion of target achievement in selection | The proportion of the target that is achieved in the selection.   
+      -->
+
+      ```{r}
+      cname <- if (params$kind>0) tabname()$colnames else paste0("dummy",LETTERS[seq(8)])
+      cname <- gsub("\u2009","",cname)
+      rbind <- NULL
+      cvalue <- c("Unique CF ID number, which is linked to the CF report giving relevant metadata"
+                 ,"CF name and description."
+                 ,"Indicates whether the CF is a representative (R) or distinctive (D) feature or both (RD) (see Marxan in the Glossary)."
+                 ,"Proportion of the whole CF extent that is captured in the selection."
+                 ,"Proportion of the CF that, as a minimum, was to be included in the final Marxan scenario."
+                 ,"Level of target achievement for the CF across the study area."
+                 ,"Level of target achievement for the CF in the selected area of interest."
+                 ,"The proportion of the target that is achieved in the selection."
+                 )
+      desc <- data.frame(Parameter=cname,Description=cvalue,check.names=FALSE)
+      knitr::kable(desc,escape=FALSE)
+      ```
+      
+      Individual CFs can be selected in this table <!-- (using shift + click and ctrl + click to select multiple CFs) --> and they will appear in the output of the following tab.
+      `r if (isArcNet) "Note that only CFs with a target contribution above 5% are included in the Chicory PAC reports."`
+   
+      <div class="example">
+      ```{r, eval=(params$kind>0 & !is.null(params$prm))}
+      da <- res
+      ##~ cname <- c('1, id'="CF ID"
+                ##~ ,'2, name'="CF Name"
+                ##~ ,'3, R/D'="Repre\uADsen\uADta\uADtive\u2009/\u2009Dis\uADtinc\uADtive"
+                ##~ ,'4, represent'="Pro\uADpor\uADtion in the se\uADlec\uADtion"
+                ##~ ,'5, target'="Con\uADser\uADva\uADtion Tar\uADget"
+                ##~ ,'6, reached'="Tar\uADget achie\uADve\uADment for the study area"
+                ##~ ,'7, selected'="Tar\uADget achie\uADve\uADment for se\uADlec\uADtion"
+                ##~ ,'8, prop'="Pro\uADpor\uADtion of tar\uADget achie\uADve\uADment in se\uADlec\uADtion"
+                ##~ )
+      cname <- try(tabname()$colnames)
+     # writeLines(cname2,"c:/tmp/res8a.Rout")
+     # cname2 <- gsub("\uA0","***",cname2)
+     # writeLines(cname2,"c:/tmp/res8b.Rout")
+     # str(cname2)
+     # print(cname2)
+      colnames(da) <- cname # if (!inherits(cname2,"try-error")) cname2 else cname
+      ret <- knitr::kable(head(da)#,format.args="class='example'"
+                            ,caption="Example of table head rows"
+                            ,format="html"
+                            ,row.names=FALSE
+                            ,escape=FALSE
+                            ,digits=3
+                            )
+      ret
+      ```
+      </div>
+
+   + `r tabReview` -- This tab provides a base map over which the AOI and any selected CFs are overlaid.  In the box at top right of map, different features on the map can be toggled on/off.  Grey links at bottom right zoom to the extent of the specified CF.  The CF colour bars on the left provide the relative importance of the different cells for this CF.  The absolute units of these colour bars are CF-specific and depend on how the CF was quantified, e. g. area, count, etc.  More information on each CF is available in the CF reports accessible through the CF ID link as previously described.
+
+      To the right of the map, the relative importance of the selected area's planning units are compared to those of the study area in terms of planning unit selection frequency (see above). The top left of the frame provides the number of planning units and CFs in the AOI and study area.  The graphs on the right provide an indication of how "replaceable" the planning units of a selected area are compared to those of the study area as a whole. So, for example, an area with planning units that are selected in every Marxan run (frequency = 100%) would be less replaceable in a Marxan solution compared to planning units that were only selected 25% of the time, or where alternative areas were chosen 75% of the time. The histogram (bottom) and box-and-whisker plot (top) show the distributions of the planning unit selection frequency for both the selected area and whole study area.
+      
+   + `r tabProp` -- This tab provides an overview of the final Marxan scenario on which the ArcNet PACs are based.  The map projection code is determined by the choice of projection on the main map.  The overlay on the base map can be changed under the Property menu to:
+   
+      + **Data coverage** -- the sum of CF coverages where CF coverages is the area of spatial intersection between CFs and planning units normalized to planning unit area. 
+      + **Layer overlap** -- shows the part of the study area with non-zero CF coverage.
+      + **Representative** -- the number of representative features in each planning unit. 
+      + **Distinctive** --  the number of distinctive features in each planning unit.
+
+
++ `r menuQuestion` -- This menu generates documentation with live examples.
+
+
+```{r,eval=FALSE}
+str(cname)
+str(colnames(da))
+str(tabname()$colnames)
+```
+
+### References
+
+:::{id="refs"}
+:::
 
 ### Glossary
 
-```{r}
-da <- data.frame()
-da <- rbind(da,data.frame(name="Marxan",desc="An instrument fo spatial planning"))
-da <- rbind(da,data.frame(name="Scenario",desc="Configuration, which is used to run Marxan"))
-da <- rbind(da,data.frame(name="Selection",desc="Area of interest for spatial analysis"))
-da <- rbind(da,data.frame(name="Region",desc="Study area"))
-da <- rbind(da,data.frame(name=paste0("[",as.character(icon("paw"))," Menu item]{.menu}"),desc="Sidebar menu"))
-da <- rbind(da,data.frame(name=paste0("[",as.character(icon("cannabis"))," Tab item]{.tab}"),desc="Top-side tabs"))
-colnames(da) <- c("Term","Definition/description")
-knitr::kable(da,format="html",escape=FALSE,format.args="line-height: 2.5;")
-```
+See also the Marxan Good Practices Handbook [@MarxanHandbook, [PDF](https://pacmara.org/wp-content/uploads/2018/05/Marxan-Good-Practices-Handbook-v2-2013.pdf)].
 
-### Installation and usage
+Term | Definition/description
+|:--|:-------|
+Cell| Also referred to as a planning unit, this is the standardised minimum size of a region whose conservation features can be represented in Marxan.
+Conservation feature (CF) | Data features that were selected to capture examples of typical habitats within a region (representative features) along with any geophysical and/or biological anomalies of particular importance for biodiversity (distinctive features). 
+Conservation target | Quantitative parameters set to determine the level of spatial inclusion of each conservation feature a Marxan solution.
+[Marxan]{#refMarxan} | The most widely used software for systematic marine conservation planning.  It uses an optimisation algorithm to find multiple "good" spatial solutions to achieve predefined conservation goals. Importantly, as a decision-support tool, Marxan does not provide just one optimised solution. It offers various spatial scenarios that achieve the conservation goals through iterative analysis cycles and expert review and adjustment. The process is based on the data used in the analysis (the conservation features); a set of conservation targets for the features; and a function that defines the "cost" of prioritising areas for the purpose of conservation. <br>See @MarxanSolutions for more information. 
+`r ifelse(isArcNet,"PAC","Selection")` | `r ifelse(isArcNet,"An area of the marine environment of documented biodiversity value that should be prioritised for future conservation and management efforts.","Area of interest for spatial analysis")`
+Planning unit | Also referred to as a cell, this is the standardised minimum size of a region whose conservation features can be represented in Marxan.
+Scenario | See [Marxan](#refMarxan).
+Thematic groups | Grouped elements of the marine environment (CFs) that were the focus for expert engagement during the Marxan process, i. e. marine mammals, seabirds, fish, sea ice biota and benthos.
 
-Shiny application with shiny-dashboard GUI:
+### License 
 
-+ [shinyapps.io](#) application. See also [PAMPAN application](https://wwfrussia.shinyapps.io/platini) without restrictions on under WWF Russia account
-
-+ Run application on your local computer.
-
-### Get started
-
-Scenario, selection and projection are selected randomly^[If selection is manually, digitizing is requered at first].
-
-Tab `r tabMap` is active, any of `r tabReview``r tabTable` can be selected.
-
-Clicking of `r menuQuestion` shows this manual.
-
-### User interface
-
-Structure is by vertical menu bar^[Not available for small screen size, e\.g\. mobile devices].
-
-+ `r menuMain` Main workspace. Available for any screens. Seratated by horizontal menu (*tabs*):
-   
-   + `r tabMap`
-   
-      Available parameters using select list with choosing a single item.
-      
-      + Select region
-
-         + Manual selection (digitizing polygons, lines and points for cells choice)
-
-         + Predefined selection (choose one from list).
-      
-         [Predefined or manual selection `r if (exists("input")) dQuote(input$rpath)` is detected in your configuraion.]{.example}
-      + Select scenario.
-        
-        [Scenario `r if (exists("input")) dQuote(input$spath)` is selected in your configuration.]{.example}
-      
-      + Select projection.
-      
-        Projections are limited by EPSG codes [@proj4]: 3571, 3572, 3573, 3574, 3575, 3576. This is the same projection class with varios longitude of origin.
-        
-        [`r if (exists("input")) dQuote(input$epsg)` is selected in your configuration.]{.example}
-
-   
-   + `r tabReview`
-      
-      + Verbal statistics about selected cells and reached targets.
-      
-      + Visual statistics.
-      
-      + Map of cells, which are selected using region coverage.
-   
-   + `r tabTable`
-      
-      Table with columns:
-
-      + CF code
-      
-      + CF name
-
-      + ...
-
-   + `r tabProp`
-      
-      Map of selected characteristics or property of input data.
-      
-      ```{r}
-      ret <- character()
-      if (params$kind>0) {
-         da <- res
-         ret <- knitr::kable(head(da)#,format.args="class='example'"
-                            ,caption="Example of table head rows (not formatted)")
-      }
-      ret
-      ```
-
-
-+ `r menuQuestion`: Application manual.
-
-+ [`r icon("info")`]{.menu}: Brief description and information about author(s).
-
-+ [`r icon("user")`]{.menu}: Link to author(s)
-
-+ [`r icon("github")`]{.menu}: Link to Github repository.
-
-### Known problems
-
-+ `r tabMap`: Duration of map rendering depends on number of Marxan planning units (POLYGONS geometry)
-
-+ `r tabMap`: Perhaps, map rendering can be optimized due to reducing of re-rendering
-
-+ `r tabTable`: Sometimes values are not rounded
-
-+ `r tabProp`: Slow rendering due to no data aggregation
-
-### What's new
-
-+ `r Sys.Date()`
-
-  *ongoing...*
-
-+ 2019-09-15
-
-  Branching supports one-level recursion in format \<project\>/\<version\>, with optional \<version\> and separated by "/" symbol.
-
-
-+ 2019-08-30
-
-  Added `r tabProp` tab.
-
-+ 2019-08-28
-
-  Added abbreviated "Representative/Distinctive" column into `r tabTable` table.
-
-  `r tabMap`: Added input for selection Marxan output between **frequency** among set of runs and **best run**.
-
-+ 2019-08-23
-
-  Plotly boxes and bars for comparison between all region and selected area(s).
-
-+ 2019-06-26
-
-  Supporting branches via /?branch=%s request in URL
-
-+ 2019-06-25
-
-  Documentation is created and associated with `r menuQuestion` menu
+Database Contents License 1.0 [DbCL](http://opendatacommons.org/licenses/dbcl/1.0/)
